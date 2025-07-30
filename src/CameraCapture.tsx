@@ -9,6 +9,7 @@ interface CameraCaptureProps {
 const CameraCapture: React.FC<CameraCaptureProps> = ({ isActive, onPhotoTaken, interval }) => {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string>('');
+  const [isCameraReady, setIsCameraReady] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const intervalRef = useRef<number | null>(null);
@@ -16,61 +17,134 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ isActive, onPhotoTaken, i
   // 启动摄像头
   const startCamera = async () => {
     try {
+      console.log('正在启动摄像头...');
+      
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: {
-          width: { ideal: 640 },
-          height: { ideal: 480 },
-          facingMode: 'user' // 前置摄像头
-        }
+          width: { ideal: 1280, min: 640 },
+          height: { ideal: 720, min: 480 },
+          facingMode: 'user', // 前置摄像头
+          frameRate: { ideal: 30 }
+        },
+        audio: false
       });
       
+      console.log('摄像头启动成功');
       setStream(mediaStream);
+      
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
+        
+        // 等待视频加载完成
+        videoRef.current.onloadedmetadata = () => {
+          console.log('视频元数据加载完成');
+          setIsCameraReady(true);
+        };
+        
+        videoRef.current.oncanplay = () => {
+          console.log('视频可以播放');
+          setIsCameraReady(true);
+        };
+        
+        videoRef.current.onerror = (e) => {
+          console.error('视频加载错误:', e);
+          setError('视频加载失败');
+        };
       }
+      
       setError('');
     } catch (err) {
       console.error('摄像头启动失败:', err);
-      setError('无法访问摄像头，请检查摄像头权限设置');
+      if (err instanceof Error) {
+        if (err.name === 'NotAllowedError') {
+          setError('摄像头权限被拒绝，请在浏览器设置中允许摄像头访问');
+        } else if (err.name === 'NotFoundError') {
+          setError('未找到摄像头设备');
+        } else if (err.name === 'NotReadableError') {
+          setError('摄像头被其他应用占用');
+        } else {
+          setError(`摄像头启动失败: ${err.message}`);
+        }
+      } else {
+        setError('无法访问摄像头，请检查摄像头权限设置');
+      }
     }
   };
 
   // 停止摄像头
   const stopCamera = () => {
+    console.log('正在停止摄像头...');
     if (stream) {
-      stream.getTracks().forEach(track => track.stop());
+      stream.getTracks().forEach(track => {
+        track.stop();
+        console.log('摄像头轨道已停止:', track.kind);
+      });
       setStream(null);
     }
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+    setIsCameraReady(false);
   };
 
   // 拍照
   const takePhoto = () => {
-    if (!videoRef.current || !canvasRef.current || !stream) return;
+    if (!videoRef.current || !canvasRef.current || !stream || !isCameraReady) {
+      console.log('拍照条件不满足:', {
+        hasVideo: !!videoRef.current,
+        hasCanvas: !!canvasRef.current,
+        hasStream: !!stream,
+        isCameraReady
+      });
+      return;
+    }
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const context = canvas.getContext('2d');
 
-    if (!context) return;
+    if (!context) {
+      console.error('无法获取画布上下文');
+      return;
+    }
+
+    // 检查视频是否已加载
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+      console.log('视频尺寸为0，等待加载...');
+      return;
+    }
+
+    console.log('开始拍照，视频尺寸:', video.videoWidth, 'x', video.videoHeight);
 
     // 设置画布尺寸
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
-    // 绘制视频帧到画布
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    try {
+      // 绘制视频帧到画布
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // 转换为base64数据
-    const photoData = canvas.toDataURL('image/jpeg', 0.8);
-    
-    // 调用回调函数
-    onPhotoTaken(photoData);
-    
-    console.log('照片已拍摄:', new Date().toLocaleString());
+      // 检查画布是否有内容
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      const hasContent = imageData.data.some(pixel => pixel !== 0);
+      
+      if (!hasContent) {
+        console.warn('画布内容为空，可能是黑色照片');
+        return;
+      }
+
+      // 转换为base64数据
+      const photoData = canvas.toDataURL('image/jpeg', 0.9);
+      
+      console.log('照片拍摄成功，大小:', photoData.length, '字节');
+      
+      // 调用回调函数
+      onPhotoTaken(photoData);
+      
+    } catch (error) {
+      console.error('拍照失败:', error);
+    }
   };
 
   // 启动定时拍照
@@ -78,6 +152,8 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ isActive, onPhotoTaken, i
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
+    
+    console.log('启动定时拍照，间隔:', interval, '秒');
     
     intervalRef.current = window.setInterval(() => {
       takePhoto();
@@ -87,8 +163,10 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ isActive, onPhotoTaken, i
   // 监听isActive状态变化
   useEffect(() => {
     if (isActive) {
+      console.log('摄像头组件激活');
       startCamera();
     } else {
+      console.log('摄像头组件停用');
       stopCamera();
     }
 
@@ -99,15 +177,16 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ isActive, onPhotoTaken, i
 
   // 监听摄像头启动成功
   useEffect(() => {
-    if (stream && isActive) {
+    if (stream && isActive && isCameraReady) {
+      console.log('摄像头准备就绪，延迟启动定时拍照');
       // 延迟启动定时拍照，确保摄像头完全启动
       const timer = setTimeout(() => {
         startPeriodicCapture();
-      }, 2000);
+      }, 3000); // 增加到3秒确保完全启动
 
       return () => clearTimeout(timer);
     }
-  }, [stream, isActive, interval]);
+  }, [stream, isActive, isCameraReady, interval]);
 
   // 组件卸载时清理
   useEffect(() => {
@@ -127,9 +206,26 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ isActive, onPhotoTaken, i
         padding: '10px',
         borderRadius: '5px',
         fontSize: '12px',
-        zIndex: 1001
+        zIndex: 1001,
+        maxWidth: '300px'
       }}>
         ⚠️ {error}
+        <br />
+        <button
+          onClick={startCamera}
+          style={{
+            marginTop: '5px',
+            padding: '4px 8px',
+            background: 'rgba(255,255,255,0.2)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '3px',
+            cursor: 'pointer',
+            fontSize: '10px'
+          }}
+        >
+          重试
+        </button>
       </div>
     );
   }
@@ -161,6 +257,11 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ isActive, onPhotoTaken, i
         <span style={{ fontSize: '10px', opacity: 0.8 }}>
           每{interval}秒拍照一次
         </span>
+        {!isCameraReady && (
+          <div style={{ fontSize: '10px', color: '#ffaa00', marginTop: '2px' }}>
+            摄像头启动中...
+          </div>
+        )}
       </div>
       
       {/* 隐藏的视频元素用于拍照 */}
@@ -191,8 +292,8 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ isActive, onPhotoTaken, i
         width: '8px',
         height: '8px',
         borderRadius: '50%',
-        background: stream ? '#00ff00' : '#ff0000',
-        animation: stream ? 'pulse 2s infinite' : 'none'
+        background: isCameraReady ? '#00ff00' : '#ffaa00',
+        animation: isCameraReady ? 'pulse 2s infinite' : 'none'
       }} />
       
       <style>{`
