@@ -318,26 +318,142 @@ const ArticleReader: React.FC<ArticleReaderProps> = ({ user: _user }) => {
                       height: isMobile ? '60vh' : '80vh', 
                       border: '1px solid rgba(255,255,255,0.2)', 
                       borderRadius: '8px',
-                      overflow: 'hidden'
+                      overflow: 'hidden',
+                      position: 'relative'
                     }}>
-                      <iframe
-                        src={(() => {
-                          let fileUrl = article.fileUrl;
-                          if (article.fileId) {
-                            const storageFile = HybridStorageService.getFile(article.fileId);
-                            if (storageFile) {
-                              fileUrl = HybridStorageService.getFileUrl(storageFile);
-                            }
+                      {(() => {
+                        let fileUrl = article.fileUrl;
+                        if (article.fileId) {
+                          const storageFile = HybridStorageService.getFile(article.fileId);
+                          if (storageFile) {
+                            fileUrl = HybridStorageService.getFileUrl(storageFile);
                           }
-                          return fileUrl ? getFilePreviewUrl(fileUrl, article.fileType || 'pdf') : '';
-                        })()}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          border: 'none'
-                        }}
-                        title={article.title}
-                      />
+                        }
+                        
+                        if (!fileUrl) {
+                          return (
+                            <div style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              height: '100%',
+                              padding: '20px',
+                              textAlign: 'center'
+                            }}>
+                              <div style={{ fontSize: '48px', marginBottom: '20px', opacity: 0.6 }}>📄</div>
+                              <h3 style={{ marginBottom: '10px', fontSize: '18px' }}>文件未找到</h3>
+                              <p style={{ marginBottom: '20px', opacity: 0.8, fontSize: '14px' }}>
+                                文件可能已被移动、修改或删除
+                              </p>
+                              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                <button
+                                  onClick={() => window.open(fileUrl || '', '_blank')}
+                                  style={{
+                                    padding: '8px 16px',
+                                    background: 'rgba(64, 158, 255, 0.8)',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    fontSize: '12px'
+                                  }}
+                                >
+                                  在新窗口打开
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    if (fileUrl) {
+                                      const a = document.createElement('a');
+                                      a.href = fileUrl;
+                                      a.download = article.fileName || 'download';
+                                      a.click();
+                                    }
+                                  }}
+                                  style={{
+                                    padding: '8px 16px',
+                                    background: 'rgba(67, 194, 58, 0.8)',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    fontSize: '12px'
+                                  }}
+                                >
+                                  下载文件
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        }
+                        
+                        const previewUrl = getFilePreviewUrl(fileUrl, article.fileType || 'pdf');
+                        
+                        return (
+                          <>
+                            <iframe
+                              src={previewUrl}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                border: 'none'
+                              }}
+                              title={article.title}
+                              onError={() => {
+                                console.error('文件预览加载失败:', previewUrl);
+                              }}
+                            />
+                            {/* 备用操作按钮 */}
+                            <div style={{
+                              position: 'absolute',
+                              top: '10px',
+                              right: '10px',
+                              display: 'flex',
+                              gap: '5px'
+                            }}>
+                              <button
+                                onClick={() => window.open(fileUrl || '', '_blank')}
+                                style={{
+                                  padding: '4px 8px',
+                                  background: 'rgba(0,0,0,0.7)',
+                                  color: '#fff',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  fontSize: '10px',
+                                  backdropFilter: 'blur(10px)'
+                                }}
+                                title="在新窗口打开"
+                              >
+                                🔗
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (fileUrl) {
+                                    const a = document.createElement('a');
+                                    a.href = fileUrl;
+                                    a.download = article.fileName || 'download';
+                                    a.click();
+                                  }
+                                }}
+                                style={{
+                                  padding: '4px 8px',
+                                  background: 'rgba(0,0,0,0.7)',
+                                  color: '#fff',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  fontSize: '10px',
+                                  backdropFilter: 'blur(10px)'
+                                }}
+                                title="下载文件"
+                              >
+                                ⬇️
+                              </button>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 ) : (

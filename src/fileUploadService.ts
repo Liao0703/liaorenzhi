@@ -81,15 +81,36 @@ export const uploadFileToOSS = async (file: File): Promise<FileUploadResult> => 
 
 // 获取文件预览URL
 export const getFilePreviewUrl = (fileUrl: string, fileType: string): string => {
-  if (fileType === 'pdf') {
-    // PDF直接使用原URL
-    return fileUrl;
-  } else if (fileType === 'word') {
-    // Word使用Office Online Viewer
-    return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`;
-  } else {
-    // 其他类型返回原URL
-    return fileUrl;
+  try {
+    if (!fileUrl) {
+      console.error('文件URL为空');
+      return '';
+    }
+
+    // 检查URL是否有效
+    try {
+      new URL(fileUrl);
+    } catch (error) {
+      console.error('无效的文件URL:', fileUrl);
+      return '';
+    }
+
+    if (fileType === 'pdf') {
+      // PDF直接使用原URL
+      return fileUrl;
+    } else if (fileType === 'word') {
+      // Word使用Office Online Viewer
+      return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`;
+    } else if (fileType === 'text') {
+      // 文本文件直接返回URL
+      return fileUrl;
+    } else {
+      // 其他类型返回原URL
+      return fileUrl;
+    }
+  } catch (error) {
+    console.error('生成文件预览URL失败:', error);
+    return fileUrl || '';
   }
 };
 
@@ -100,4 +121,49 @@ export const formatFileSize = (bytes: number): string => {
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}; 
+
+// 检查文件是否可访问
+export const checkFileAccessibility = async (fileUrl: string): Promise<boolean> => {
+  try {
+    if (!fileUrl) return false;
+    
+    const response = await fetch(fileUrl, { 
+      method: 'HEAD',
+      mode: 'cors'
+    });
+    
+    return response.ok;
+  } catch (error) {
+    console.error('检查文件可访问性失败:', error);
+    return false;
+  }
+};
+
+// 获取文件状态信息
+export const getFileStatus = async (fileUrl: string): Promise<{
+  accessible: boolean;
+  error?: string;
+}> => {
+  try {
+    if (!fileUrl) {
+      return { accessible: false, error: '文件URL为空' };
+    }
+
+    const accessible = await checkFileAccessibility(fileUrl);
+    
+    if (!accessible) {
+      return { 
+        accessible: false, 
+        error: '文件无法访问，可能已被删除或权限不足' 
+      };
+    }
+
+    return { accessible: true };
+  } catch (error) {
+    return { 
+      accessible: false, 
+      error: error instanceof Error ? error.message : '未知错误' 
+    };
+  }
 }; 
