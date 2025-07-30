@@ -207,24 +207,25 @@ const ArticleReader: React.FC<ArticleReaderProps> = ({ user: _user }) => {
       {isTimerActive && (
         <div style={{
           position: 'fixed',
-          top: '15px',
-          right: '15px',
-          background: 'rgba(0,0,0,0.8)',
-          padding: '12px 15px',
-          borderRadius: '8px',
+          top: '10px',
+          right: '10px',
+          background: 'rgba(0,0,0,0.7)',
+          padding: '8px 12px',
+          borderRadius: '6px',
           zIndex: 1000,
           backdropFilter: 'blur(10px)',
-          minWidth: '120px'
+          minWidth: '100px',
+          fontSize: '12px'
         }}>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#409eff' }}>
+            <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#409eff' }}>
               {formatTime(readingTime)}
             </div>
-            <div style={{ fontSize: '11px', opacity: 0.8, marginTop: '2px' }}>
+            <div style={{ fontSize: '9px', opacity: 0.8, marginTop: '1px' }}>
               要求：{requiredTime}分钟
             </div>
             {!isPageVisible && (
-              <div style={{ fontSize: '10px', color: '#ff6b6b', marginTop: '3px' }}>
+              <div style={{ fontSize: '8px', color: '#ff6b6b', marginTop: '2px' }}>
                 计时已暂停
               </div>
             )}
@@ -235,16 +236,16 @@ const ArticleReader: React.FC<ArticleReaderProps> = ({ user: _user }) => {
       {currentStep === 'reading' && (
         <div style={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : '1fr 250px',
+          gridTemplateColumns: isMobile ? '1fr' : '1fr 200px',
           gridTemplateRows: isMobile ? '1fr auto' : 'auto',
-          gap: isMobile ? '10px' : '20px',
+          gap: isMobile ? '10px' : '15px',
           height: isMobile ? 'auto' : 'calc(100vh - 120px)',
           padding: isMobile ? '10px' : '0'
         }}>
           {/* 文章内容 */}
           <div style={{
             background: 'rgba(0,0,0,0.3)',
-            padding: isMobile ? '15px' : '25px',
+            padding: isMobile ? '15px' : '20px',
             borderRadius: '12px',
             backdropFilter: 'blur(10px)',
             overflowY: 'auto',
@@ -281,12 +282,12 @@ const ArticleReader: React.FC<ArticleReaderProps> = ({ user: _user }) => {
                 {/* 文件型文章预览 */}
                 {article.fileType && article.fileType !== 'none' && (article.fileUrl || article.fileId) ? (
                   <div>
-                    <div style={{ marginBottom: '15px', padding: '12px', background: 'rgba(255,255,255,0.1)', borderRadius: '8px' }}>
-                      <h4 style={{ margin: '0 0 8px 0', fontSize: isMobile ? '14px' : '16px' }}>📄 文件预览</h4>
-                      <p style={{ margin: '0', fontSize: isMobile ? '12px' : '13px', opacity: '0.8' }}>
+                    <div style={{ marginBottom: '12px', padding: '10px', background: 'rgba(255,255,255,0.1)', borderRadius: '8px' }}>
+                      <h4 style={{ margin: '0 0 6px 0', fontSize: isMobile ? '14px' : '15px' }}>📄 文件预览</h4>
+                      <p style={{ margin: '0', fontSize: isMobile ? '12px' : '12px', opacity: '0.8' }}>
                         文件名: {article.fileName || '未知文件'}
                         {article.storageType && (
-                          <span style={{ marginLeft: '8px', padding: '2px 6px', background: 'rgba(103, 194, 58, 0.2)', color: '#67c23a', borderRadius: '4px', fontSize: '10px' }}>
+                          <span style={{ marginLeft: '6px', padding: '2px 4px', background: 'rgba(103, 194, 58, 0.2)', color: '#67c23a', borderRadius: '3px', fontSize: '9px' }}>
                             {article.storageType === 'hybrid' ? '混合存储' : article.storageType === 'local' ? '本地存储' : 'OSS存储'}
                           </span>
                         )}
@@ -294,7 +295,7 @@ const ArticleReader: React.FC<ArticleReaderProps> = ({ user: _user }) => {
                     </div>
                     <div style={{ 
                       width: '100%', 
-                      height: isMobile ? '60vh' : '75vh', 
+                      height: isMobile ? '60vh' : '80vh', 
                       border: '1px solid rgba(255,255,255,0.2)', 
                       borderRadius: '8px',
                       overflow: 'hidden'
@@ -330,28 +331,28 @@ const ArticleReader: React.FC<ArticleReaderProps> = ({ user: _user }) => {
           {/* 学习提示 */}
           <div style={{
             background: 'rgba(0,0,0,0.3)',
-            padding: isMobile ? '12px' : '18px',
+            padding: isMobile ? '12px' : '15px',
             borderRadius: '12px',
             backdropFilter: 'blur(10px)',
             height: 'fit-content',
             order: isMobile ? 2 : 'auto',
-            minWidth: isMobile ? 'auto' : '220px'
+            minWidth: isMobile ? 'auto' : '180px'
           }}>
             <h3 style={{ 
-              marginBottom: isMobile ? '8px' : '12px',
-              fontSize: isMobile ? '14px' : '16px',
+              marginBottom: isMobile ? '8px' : '10px',
+              fontSize: isMobile ? '14px' : '15px',
               fontWeight: 'bold'
             }}>学习提示</h3>
             <div style={{ 
-              fontSize: isMobile ? '12px' : '13px', 
-              lineHeight: isMobile ? '1.4' : '1.5',
+              fontSize: isMobile ? '12px' : '12px', 
+              lineHeight: isMobile ? '1.4' : '1.4',
               opacity: '0.9'
             }}>
-              <p style={{ margin: isMobile ? '6px 0' : '8px 0' }}>📖 请仔细阅读文章内容</p>
-              <p style={{ margin: isMobile ? '6px 0' : '8px 0' }}>⏱️ 阅读时长达到要求后才能答题</p>
-              <p style={{ margin: isMobile ? '6px 0' : '8px 0' }}>🚫 请勿切换页面或标签页</p>
-              <p style={{ margin: isMobile ? '6px 0' : '8px 0' }}>📝 阅读完成后将进行答题测试</p>
-              <p style={{ margin: isMobile ? '6px 0' : '8px 0' }}>🎯 答题成绩将计入学习记录</p>
+              <p style={{ margin: isMobile ? '6px 0' : '6px 0' }}>📖 请仔细阅读文章内容</p>
+              <p style={{ margin: isMobile ? '6px 0' : '6px 0' }}>⏱️ 阅读时长达到要求后才能答题</p>
+              <p style={{ margin: isMobile ? '6px 0' : '6px 0' }}>🚫 请勿切换页面或标签页</p>
+              <p style={{ margin: isMobile ? '6px 0' : '6px 0' }}>📝 阅读完成后将进行答题测试</p>
+              <p style={{ margin: isMobile ? '6px 0' : '6px 0' }}>🎯 答题成绩将计入学习记录</p>
             </div>
           </div>
         </div>
