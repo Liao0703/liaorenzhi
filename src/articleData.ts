@@ -1,4 +1,6 @@
 // 文章数据存储 - 模拟数据库
+import dataSyncService from './dataSyncService';
+
 export interface ArticleData {
   id: string;
   title: string;
@@ -37,6 +39,8 @@ const loadArticlesFromStorage = (): ArticleData[] => {
 const saveArticlesToStorage = (articles: ArticleData[]) => {
   try {
     localStorage.setItem('learning_articles', JSON.stringify(articles));
+    // 标记数据变化，触发同步
+    dataSyncService.markChanged('articles');
   } catch (error) {
     console.error('保存文章数据失败:', error);
   }
@@ -98,45 +102,67 @@ if (articlesData.length === 0) {
 
 第十四条 信号显示异常时，应当立即停止相关作业。
 
-## 第四章 应急处理
+## 第四章 安全措施
 
-### 第一节 事故处理
+### 第一节 防护措施
 
-第十五条 发生事故时，应当立即启动应急预案。
+第十五条 作业人员应当穿戴符合要求的劳动防护用品。
 
-第十六条 事故现场应当设置警示标志，防止次生事故。
+第十六条 作业现场应当设置必要的安全警示标志。
 
-第十七条 事故调查应当按照规定程序进行，查明原因并制定防范措施。
+第十七条 作业前应当进行安全技术交底。
 
-### 第二节 应急救援
+### 第二节 应急处理
 
-第十八条 应急救援队伍应当定期进行培训和演练。
+第十八条 发生事故时，应当立即启动应急预案。
 
-第十九条 应急救援设备应当保持完好状态，确保随时可用。
+第十九条 事故现场应当采取有效措施防止次生灾害。
 
-第二十条 应急救援行动应当统一指挥，协调配合。
+第二十条 事故调查应当按照规定程序进行。
 
 ## 第五章 监督检查
 
-第二十一条 铁路运输企业应当建立安全监督检查制度。
+### 第一节 检查制度
 
-第二十二条 监督检查人员应当具备相应的专业知识和技能。
+第二十一条 建立定期检查制度，确保安全措施落实到位。
+
+第二十二条 检查人员应当具备相应的专业知识和技能。
+
+第二十三条 检查结果应当及时记录并整改。
+
+### 第二节 责任追究
+
+第二十四条 违反本规程的行为，应当依法追究责任。
+
+第二十五条 造成事故的，应当依法承担相应责任。
+
+第二十六条 构成犯罪的，依法追究刑事责任。
+
+## 第六章 附则
+
+第二十七条 本规程由铁路安全管理部门负责解释。
+
+第二十八条 本规程自发布之日起施行。
+
+第二十九条 各铁路局可根据实际情况制定实施细则。
+
+第三十条 本规程的修改和废止，按照有关规定执行。
 `,
     questions: [
       {
         id: 1,
-        question: '铁路从业人员上岗前需要具备什么条件？',
+        question: '铁路从业人员上岗前需要什么条件？',
         options: [
-          'A. 具备相应的安全知识和操作技能，经过安全培训并考核合格',
-          'B. 只需要有工作经验即可',
-          'C. 只需要身体健康即可',
+          'A. 具备相应的安全知识和操作技能',
+          'B. 经过安全培训并考核合格',
+          'C. 以上都是',
           'D. 不需要任何条件'
         ],
-        correctAnswer: 0
+        correctAnswer: 2
       },
       {
         id: 2,
-        question: '列车运行前应当对哪些设备进行检查？',
+        question: '列车运行前应当做什么检查？',
         options: [
           'A. 只检查车辆',
           'B. 只检查信号',
@@ -199,6 +225,8 @@ if (articlesData.length === 0) {
     ]
   }
 ];
+  // 保存初始数据
+  saveArticlesToStorage(articlesData);
 }
 
 // 获取文章数据
@@ -238,4 +266,12 @@ export const deleteArticle = (id: string) => {
 // 获取所有文章
 export const getAllArticles = () => {
   return [...articlesData];
-}; 
+};
+
+// 重新加载文章数据（用于同步）
+export const reloadArticles = () => {
+  articlesData = loadArticlesFromStorage();
+};
+
+// 监听数据重新加载事件
+window.addEventListener('dataReload', reloadArticles); 

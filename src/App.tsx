@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import bgImg from './assets/station-bg.jpg';
@@ -8,21 +8,52 @@ import Dashboard from './Dashboard';
 import ArticleList from './ArticleList';
 import ArticleReader from './ArticleReader';
 import AdminPanel from './AdminPanel';
+import DataSyncStatus from './DataSyncStatus';
 
-const App: React.FC = () => {
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+function App() {
+  const [user, setUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleLoginSuccess = (user: any) => {
-    setLoggedIn(true);
-    setCurrentUser(user);
-    console.log('登录成功，用户信息：', user);
+  useEffect(() => {
+    // 模拟用户登录状态检查
+    const checkUserLogin = () => {
+      const savedUser = localStorage.getItem('learning_user');
+      if (savedUser) {
+        setUser(JSON.parse(savedUser));
+      }
+      setIsLoading(false);
+    };
+
+    checkUserLogin();
+  }, []);
+
+  const handleLogin = (userData: any) => {
+    setUser(userData);
+    localStorage.setItem('learning_user', JSON.stringify(userData));
   };
 
   const handleLogout = () => {
-    setLoggedIn(false);
-    setCurrentUser(null);
+    setUser(null);
+    localStorage.removeItem('learning_user');
   };
+
+  if (isLoading) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        color: '#fff'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '24px', marginBottom: '20px' }}>加载中...</div>
+          <div style={{ width: '40px', height: '40px', border: '4px solid rgba(255,255,255,0.3)', borderTop: '4px solid #fff', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Router>
@@ -39,34 +70,39 @@ const App: React.FC = () => {
           <Route
             path="/"
             element={
-              loggedIn ? <Navigate to="/dashboard" replace /> : <Login onLoginSuccess={handleLoginSuccess} />
+              user ? <Navigate to="/dashboard" replace /> : (
+                <Login onLoginSuccess={handleLogin} />
+              )
             }
           />
           <Route
             path="/dashboard"
             element={
-              loggedIn ? <Dashboard user={currentUser} onLogout={handleLogout} /> : <Navigate to="/" replace />
+              user ? <Dashboard user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />
             }
           />
           <Route
             path="/articles"
             element={
-              loggedIn ? <ArticleList user={currentUser} /> : <Navigate to="/" replace />
+              user ? <ArticleList user={user} /> : <Navigate to="/" replace />
             }
           />
           <Route
             path="/article/:id"
             element={
-              loggedIn ? <ArticleReader user={currentUser} /> : <Navigate to="/" replace />
+              user ? <ArticleReader user={user} /> : <Navigate to="/" replace />
             }
           />
           <Route
             path="/admin"
             element={
-              loggedIn && currentUser?.role === 'admin' ? <AdminPanel user={currentUser} /> : <Navigate to="/dashboard" replace />
+              user?.role === 'admin' ? <AdminPanel user={user} /> : <Navigate to="/dashboard" replace />
             }
           />
         </Routes>
+
+        {/* 数据同步状态显示 */}
+        <DataSyncStatus />
 
         {/* 版权信息栏 */}
         <footer
@@ -92,6 +128,6 @@ const App: React.FC = () => {
       </div>
     </Router>
   );
-};
+}
 
 export default App;
