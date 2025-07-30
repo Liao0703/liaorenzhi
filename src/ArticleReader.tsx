@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getArticleById } from './articleData';
 import CameraCapture from './CameraCapture';
-import { savePhoto } from './photoStorage';
+import { savePhoto, saveUserLearningRecord, getPhotosByUserId } from './photoStorage';
 import { getSettings } from './settingsStorage';
 import { getFilePreviewUrl } from './fileUploadService';
 import { HybridStorageService } from './hybridStorageService';
@@ -117,6 +117,26 @@ const ArticleReader: React.FC<ArticleReaderProps> = ({ user: _user }) => {
     });
     const finalScore = Math.round((correctCount / article.questions.length) * 100);
     setScore(finalScore);
+    
+    // 保存用户学习记录
+    if (_user) {
+      const userPhotos = getPhotosByUserId(_user.id?.toString() || '0');
+      const articlePhotos = userPhotos.filter(photo => photo.articleId === article.id);
+      
+      saveUserLearningRecord(
+        _user.id?.toString() || '0',
+        _user.name || '未知用户',
+        article.id,
+        article.title,
+        Math.floor(readingTime / 60), // 转换为分钟
+        finalScore,
+        articlePhotos,
+        finalScore >= 60 ? 'completed' : 'failed'
+      );
+      
+      console.log('用户学习记录已保存');
+    }
+    
     setCurrentStep('completed');
   };
 

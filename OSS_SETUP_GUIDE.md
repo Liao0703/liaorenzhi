@@ -1,239 +1,170 @@
-# ☁️ 阿里云OSS配置指南
+# 阿里云OSS接入指南
 
-## 🎯 概述
+## 📋 前置准备
 
-本指南将帮助您配置阿里云OSS（对象存储服务）来存储您的学习系统数据，解决本地存储空间不足的问题。
-
-## 📋 准备工作
-
-### 1. **阿里云账号**
-- 确保您有阿里云账号
-- 完成实名认证
-- 确保账户有足够的余额
-
-### 2. **开通OSS服务**
+### 1. 获取AccessKey
 1. 登录阿里云控制台
-2. 搜索"对象存储OSS"
-3. 点击"开通服务"
-4. 选择付费方式（建议选择按量付费）
+2. 点击右上角头像 → "AccessKey 管理"
+3. 创建AccessKey（建议创建子用户AccessKey）
+4. 记录AccessKey ID和AccessKey Secret
 
-## 🚀 第一步：创建OSS Bucket
+### 2. 配置Bucket权限
+1. 进入OSS控制台 → Bucket列表
+2. 点击您的Bucket名称（liaorenzhi）
+3. 进入"权限管理" → "Bucket授权策略"
+4. 添加以下权限策略：
 
-### 1. **进入OSS控制台**
-1. 登录阿里云控制台
-2. 点击"对象存储OSS"
-3. 点击"创建Bucket"
-
-### 2. **配置Bucket**
-```
-Bucket名称: learning-platform-data (自定义，全局唯一)
-地域: 选择离您最近的地域，如"华东1（杭州）"
-读写权限: 私有 (推荐) 或 公共读
-版本控制: 关闭
-服务端加密: 不加密
-```
-
-### 3. **记录重要信息**
-创建完成后，请记录以下信息：
-- **Bucket名称**: 如 `learning-platform-data`
-- **地域**: 如 `oss-cn-hangzhou`
-- **访问域名**: 如 `https://oss-cn-hangzhou.aliyuncs.com`
-
-## 🔑 第二步：创建AccessKey
-
-### 1. **进入RAM控制台**
-1. 登录阿里云控制台
-2. 搜索"RAM访问控制"
-3. 点击"RAM访问控制"
-
-### 2. **创建用户**
-1. 点击"用户" → "创建用户"
-2. 填写用户信息：
-   - 登录名称: `oss-user`
-   - 显示名称: `OSS用户`
-   - 访问方式: 勾选"编程访问"
-
-### 3. **创建AccessKey**
-1. 创建用户后，点击"创建AccessKey"
-2. 选择"继续使用AccessKey"
-3. 记录以下信息：
-   - **AccessKey ID**: 如 `LTAI5tRqFHMJqKqKqKqKqKq`
-   - **AccessKey Secret**: 如 `KqKqKqKqKqKqKqKqKqKqKqKqKqKqKqKq`
-
-### 4. **授权策略**
-1. 为用户添加权限
-2. 搜索并选择 `AliyunOSSFullAccess`
-3. 点击"确定"
-
-## ⚙️ 第三步：配置系统
-
-### 1. **打开系统配置**
-1. 登录管理员账号
-2. 进入"系统设置"页面
-3. 找到"云存储配置"部分
-4. 点击"配置OSS"按钮
-
-### 2. **填写配置信息**
-```
-地域 (Region): oss-cn-hangzhou
-AccessKey ID: LTAI5tRqFHMJqKqKqKqKqKq
-AccessKey Secret: KqKqKqKqKqKqKqKqKqKqKqKqKqKqKqKq
-Bucket名称: learning-platform-data
-访问域名: https://oss-cn-hangzhou.aliyuncs.com
+```json
+{
+    "Version": "1",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "*"
+            },
+            "Action": [
+                "oss:GetObject"
+            ],
+            "Resource": [
+                "acs:oss:*:*:liaorenzhi/*"
+            ],
+            "Condition": {
+                "StringEquals": {
+                    "oss:Referer": "*"
+                }
+            }
+        }
+    ]
+}
 ```
 
-### 3. **测试连接**
-1. 点击"保存配置"
-2. 点击"测试连接"
-3. 确认显示"✅ OSS配置验证成功！"
+### 3. 配置CORS（跨域访问）
+1. 在Bucket管理页面 → "权限管理" → "跨域设置"
+2. 添加CORS规则：
 
-## 📤 第四步：上传数据
-
-### 1. **上传现有数据**
-1. 配置成功后，点击"上传数据到OSS"
-2. 系统会自动上传：
-   - 文章数据
-   - 照片数据
-   - 系统设置
-
-### 2. **查看上传结果**
-上传成功后会显示文件URL：
 ```
-文章: https://learning-platform-data.oss-cn-hangzhou.aliyuncs.com/data/articles_2024-01-15.json
-照片: https://learning-platform-data.oss-cn-hangzhou.aliyuncs.com/data/photos_2024-01-15.json
-设置: https://learning-platform-data.oss-cn-hangzhou.aliyuncs.com/data/settings.json
+来源: *
+允许Methods: GET, POST, PUT, DELETE, HEAD
+允许Headers: *
+暴露Headers: ETag
+缓存时间: 86400
 ```
 
-## 📁 文件结构说明
+## 🔧 系统配置
 
-### **数据文件结构**
+### 1. 在管理后台配置OSS
+1. 登录系统 → 进入管理后台
+2. 点击"OSS配置"标签
+3. 填写以下信息：
+
 ```
-learning-platform-data/
-├── data/
-│   ├── articles_2024-01-15.json    # 文章数据
-│   ├── photos_2024-01-15.json      # 照片数据
-│   └── settings.json               # 系统设置
-├── photos/
-│   ├── 1703123456789.jpg          # 学习监控照片
-│   └── 1703123456790.jpg
-└── test/
-    └── connection_test_1703123456789.json  # 连接测试文件
+地域: oss-cn-chengdu
+AccessKey ID: [您的AccessKey ID]
+AccessKey Secret: [您的AccessKey Secret]
+Bucket名称: liaorenzhi
+Endpoint: https://oss-cn-chengdu.aliyuncs.com
 ```
 
-### **文件命名规则**
-- **文章数据**: `data/articles_YYYY-MM-DD.json`
-- **照片数据**: `data/photos_YYYY-MM-DD.json`
-- **系统设置**: `data/settings.json`
-- **照片文件**: `photos/{photoId}.jpg`
+### 2. 测试连接
+1. 点击"测试连接"按钮
+2. 如果显示"连接成功"，说明配置正确
+3. 点击"保存配置"
 
-## 💰 费用说明
+## 📁 文件上传配置
 
-### **存储费用**
-- **标准存储**: 0.12元/GB/月
-- **低频访问**: 0.08元/GB/月
-- **归档存储**: 0.033元/GB/月
+### 1. 上传文件类型支持
+- PDF文件 (.pdf)
+- Word文档 (.doc, .docx)
+- 图片文件 (.jpg, .png, .gif)
+- 文本文件 (.txt)
 
-### **流量费用**
-- **内网流量**: 免费
-- **外网流出流量**: 0.5元/GB
-- **外网流入流量**: 免费
+### 2. 文件存储路径
+文件将按以下结构存储：
+```
+liaorenzhi/
+├── articles/          # 文章文件
+│   ├── article_1.pdf
+│   └── article_2.docx
+├── images/           # 图片文件
+│   └── uploads/
+└── sync/            # 同步数据
+    └── articles_sync.json
+```
 
-### **请求费用**
-- **GET请求**: 0.01元/万次
-- **PUT请求**: 0.01元/万次
+## 🔒 安全配置
 
-### **成本估算**
-假设您的系统：
-- 存储1GB数据
-- 每月1000次访问
-- 每月1GB外网流量
+### 1. 防盗链设置（可选）
+1. 在Bucket管理页面 → "权限管理" → "防盗链"
+2. 添加Referer白名单：
+   - `*.yourdomain.com`
+   - `localhost:*`
+   - `127.0.0.1:*`
 
-**月费用**: 约0.12 + 0.01 + 0.5 = 0.63元
+### 2. 访问控制
+1. 设置Bucket为私有读写
+2. 通过签名URL访问文件
+3. 定期轮换AccessKey
 
-## 🔒 安全建议
+## 🚀 使用步骤
 
-### 1. **访问控制**
-- 使用RAM用户而不是主账号
-- 只授予必要的权限
-- 定期轮换AccessKey
+### 1. 管理员上传文件
+1. 进入管理后台 → "文章管理"
+2. 点击"添加文章"
+3. 填写文章信息
+4. 上传文件（支持拖拽）
+5. 文件自动上传到OSS
+6. 保存文章
 
-### 2. **数据加密**
-- 启用服务端加密
-- 使用HTTPS传输
-- 定期备份重要数据
+### 2. 职工查看文件
+1. 职工登录系统
+2. 进入文章列表
+3. 点击文章开始阅读
+4. 文件从OSS加载显示
 
-### 3. **监控告警**
-- 设置费用告警
-- 监控异常访问
-- 定期检查访问日志
+## 🔍 故障排除
 
-## 🛠️ 故障排除
+### 1. 常见错误及解决方案
 
-### **常见问题**
+**错误：Access Denied**
+- 检查AccessKey权限
+- 确认Bucket名称正确
+- 验证CORS配置
 
-#### 1. **配置验证失败**
-**可能原因**:
-- AccessKey ID或Secret错误
-- Bucket名称错误
-- 地域配置错误
-- 网络连接问题
+**错误：跨域请求被阻止**
+- 检查CORS配置
+- 确认来源域名在白名单中
 
-**解决方法**:
-- 检查配置信息是否正确
-- 确认网络连接正常
-- 验证AccessKey权限
+**错误：文件上传失败**
+- 检查网络连接
+- 确认文件大小不超过限制
+- 验证文件类型是否支持
 
-#### 2. **上传失败**
-**可能原因**:
-- 存储空间不足
-- 权限不足
-- 网络超时
+### 2. 调试方法
+1. 打开浏览器开发者工具
+2. 查看Network标签页
+3. 检查OSS请求的响应状态
+4. 查看Console中的错误信息
 
-**解决方法**:
-- 检查OSS存储空间
-- 确认用户权限
-- 重试上传操作
+## 📊 监控和维护
 
-#### 3. **费用异常**
-**可能原因**:
-- 数据量过大
-- 访问频率过高
-- 外网流量过多
+### 1. 存储使用情况
+- 定期检查Bucket使用量
+- 监控存储费用
+- 清理无用文件
 
-**解决方法**:
-- 优化数据存储
-- 控制访问频率
-- 使用内网访问
+### 2. 性能优化
+- 启用CDN加速
+- 配置图片压缩
+- 使用合适的存储类型
 
 ## 📞 技术支持
 
-### **阿里云支持**
-- 官方文档: https://help.aliyun.com/product/31815.html
-- 技术支持: 400-801-3260
-- 在线客服: 阿里云控制台
-
-### **系统支持**
-- 查看系统日志
-- 检查网络连接
-- 验证配置信息
-
-## 📝 最佳实践
-
-### 1. **数据管理**
-- 定期清理过期数据
-- 压缩大文件
-- 使用合适的存储类型
-
-### 2. **成本控制**
-- 设置费用告警
-- 监控使用情况
-- 优化存储策略
-
-### 3. **备份策略**
-- 定期备份重要数据
-- 多地备份
-- 测试恢复流程
+如果遇到问题，请：
+1. 检查本指南的故障排除部分
+2. 查看浏览器控制台错误信息
+3. 联系系统管理员
 
 ---
 
-*配置完成后，您的学习系统将支持云端存储，不再受本地存储空间限制！* 
+**注意：请妥善保管您的AccessKey信息，不要泄露给他人。** 

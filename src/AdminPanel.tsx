@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import { getAllArticles, updateArticle, addArticle, deleteArticle } from './articleData';
 import type { ArticleData } from './articleData';
-import { getAllPhotos, getPhotoStats, clearAllPhotos, exportPhotoData } from './photoStorage';
+import { getAllPhotos, getPhotoStats, clearAllPhotos, exportPhotoData, getUserLearningRecords, exportUserPhotosAsJPG, exportUserLearningReport, exportPhotoAsJPG } from './photoStorage';
 import { getSettings, updateSettings } from './settingsStorage';
 import { getAllSystemData, backupData, clearAllData } from './dataManager';
 import { getLearningStorageData, getStorageUsage, exportStorageReport } from './storageViewer';
@@ -811,6 +811,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
             <h4 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>照片统计</h4>
             {(() => {
               const stats = getPhotoStats();
+              const learningRecords = getUserLearningRecords();
               return (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px' }}>
                   <div style={{ textAlign: 'center' }}>
@@ -821,9 +822,139 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
                     <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#67c23a' }}>{stats.todayPhotos}</div>
                     <div style={{ fontSize: '14px', opacity: 0.8 }}>今日照片数</div>
                   </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#e6a23c' }}>{learningRecords.length}</div>
+                    <div style={{ fontSize: '14px', opacity: 0.8 }}>学习记录数</div>
+                  </div>
                 </div>
               );
             })()}
+          </div>
+
+          {/* 用户学习记录 */}
+          <div style={{
+            background: 'rgba(255,255,255,0.1)',
+            padding: '20px',
+            borderRadius: '8px',
+            marginBottom: '20px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h4 style={{ margin: 0, fontSize: '16px' }}>用户学习记录</h4>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={() => {
+                    const records = getUserLearningRecords();
+                    if (records.length === 0) {
+                      alert('暂无学习记录');
+                      return;
+                    }
+                    
+                    // 导出所有用户的学习记录
+                    const csvContent = [
+                      ['用户姓名', '文章标题', '阅读时长(分钟)', '答题成绩', '完成时间', '学习状态', '照片数量'],
+                      ...records.map(record => [
+                        record.userName,
+                        record.articleTitle,
+                        record.readingTime.toString(),
+                        record.quizScore.toString(),
+                        new Date(record.completedAt).toLocaleString(),
+                        record.status === 'completed' ? '已完成' : '未完成',
+                        record.photos.length.toString()
+                      ])
+                    ].map(row => row.join(',')).join('\n');
+                    
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `所有用户学习记录_${new Date().toLocaleDateString()}.csv`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  style={{
+                    padding: '6px 12px',
+                    background: 'linear-gradient(90deg,#409eff 60%,#2b8cff 100%)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '12px'
+                  }}
+                >
+                  导出学习记录
+                </button>
+              </div>
+            </div>
+            
+            <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+              {(() => {
+                const records = getUserLearningRecords();
+                if (records.length === 0) {
+                  return (
+                    <div style={{ textAlign: 'center', padding: '20px', opacity: 0.6 }}>
+                      暂无学习记录
+                    </div>
+                  );
+                }
+                
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {records.slice(-10).reverse().map(record => (
+                      <div key={`${record.userId}-${record.articleId}`} style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '10px',
+                        background: 'rgba(255,255,255,0.05)',
+                        borderRadius: '6px',
+                        fontSize: '12px'
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>
+                            {record.userName} - {record.articleTitle}
+                          </div>
+                          <div style={{ opacity: 0.8 }}>
+                            阅读时长: {record.readingTime}分钟 | 成绩: {record.quizScore}分 | 
+                            照片: {record.photos.length}张 | 
+                            {new Date(record.completedAt).toLocaleString()}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '5px' }}>
+                          <button
+                            onClick={() => exportUserPhotosAsJPG(record.userId, record.userName)}
+                            style={{
+                              padding: '4px 8px',
+                              background: 'rgba(67, 194, 58, 0.8)',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '10px'
+                            }}
+                          >
+                            导出照片
+                          </button>
+                          <button
+                            onClick={() => exportUserLearningReport(record.userId, record.userName)}
+                            style={{
+                              padding: '4px 8px',
+                              background: 'rgba(64, 158, 255, 0.8)',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '10px'
+                            }}
+                          >
+                            导出记录
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
           </div>
 
           {/* 照片列表 */}
@@ -916,15 +1047,41 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: '14px', fontWeight: 'bold' }}>
                             {photo.articleTitle}
+                            {photo.userName && (
+                              <span style={{ marginLeft: '8px', fontSize: '12px', opacity: 0.7 }}>
+                                - {photo.userName}
+                              </span>
+                            )}
                           </div>
                           <div style={{ fontSize: '12px', opacity: 0.8 }}>
                             {new Date(photo.timestamp).toLocaleString('zh-CN')}
+                            {photo.readingTime && (
+                              <span style={{ marginLeft: '8px' }}>
+                                | 阅读时长: {photo.readingTime}分钟
+                              </span>
+                            )}
+                            {photo.quizScore && (
+                              <span style={{ marginLeft: '8px' }}>
+                                | 成绩: {photo.quizScore}分
+                              </span>
+                            )}
                           </div>
-                          {photo.userName && (
-                            <div style={{ fontSize: '12px', opacity: 0.6 }}>
-                              用户：{photo.userName}
-                            </div>
-                          )}
+                        </div>
+                        <div style={{ display: 'flex', gap: '5px' }}>
+                          <button
+                            onClick={() => exportPhotoAsJPG(photo, `${photo.userName || '未知用户'}_${photo.articleTitle}_${new Date(photo.timestamp).toLocaleDateString()}.jpg`)}
+                            style={{
+                              padding: '4px 8px',
+                              background: 'rgba(67, 194, 58, 0.8)',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '10px'
+                            }}
+                          >
+                            导出JPG
+                          </button>
                         </div>
                       </div>
                     ))}
