@@ -9,6 +9,7 @@ import ArticleList from './ArticleList';
 import ArticleReader from './ArticleReader';
 import AdminPanel from './AdminPanel';
 import DataSyncStatus from './DataSyncStatus';
+import CameraTest from './CameraTest';
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -97,6 +98,12 @@ function App() {
             path="/admin"
             element={
               user?.role === 'admin' ? <AdminPanel user={user} /> : <Navigate to="/dashboard" replace />
+            }
+          />
+          <Route
+            path="/camera-test"
+            element={
+              user ? <CameraTest /> : <Navigate to="/" replace />
             }
           />
         </Routes>

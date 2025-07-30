@@ -1041,7 +1041,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
                             width: '60px',
                             height: '45px',
                             objectFit: 'cover',
-                            borderRadius: '4px'
+                            borderRadius: '4px',
+                            border: '1px solid rgba(255,255,255,0.2)'
+                          }}
+                          onError={(e) => {
+                            console.error('照片加载失败:', photo.id, photo.photoData?.substring(0, 100));
+                            e.currentTarget.style.background = 'rgba(255,0,0,0.3)';
+                            e.currentTarget.style.border = '1px solid red';
+                          }}
+                          onLoad={() => {
+                            console.log('照片加载成功:', photo.id, '大小:', photo.photoData?.length || 0);
                           }}
                         />
                         <div style={{ flex: 1 }}>

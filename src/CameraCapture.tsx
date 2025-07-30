@@ -19,6 +19,12 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ isActive, onPhotoTaken, i
     try {
       console.log('正在启动摄像头...');
       
+      // 首先尝试获取可用的摄像头设备
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      
+      console.log('可用的摄像头设备:', videoDevices.map(d => ({ id: d.deviceId, label: d.label })));
+      
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: {
           width: { ideal: 1280, min: 640 },
@@ -30,6 +36,11 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ isActive, onPhotoTaken, i
       });
       
       console.log('摄像头启动成功');
+      console.log('摄像头轨道信息:', mediaStream.getVideoTracks().map(track => ({
+        label: track.label,
+        settings: track.getSettings()
+      })));
+      
       setStream(mediaStream);
       
       if (videoRef.current) {
@@ -38,6 +49,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ isActive, onPhotoTaken, i
         // 等待视频加载完成
         videoRef.current.onloadedmetadata = () => {
           console.log('视频元数据加载完成');
+          console.log('视频尺寸:', videoRef.current?.videoWidth, 'x', videoRef.current?.videoHeight);
           setIsCameraReady(true);
         };
         
@@ -127,10 +139,32 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ isActive, onPhotoTaken, i
 
       // 检查画布是否有内容
       const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-      const hasContent = imageData.data.some(pixel => pixel !== 0);
       
-      if (!hasContent) {
-        console.warn('画布内容为空，可能是黑色照片');
+      // 更详细的内容检查
+      let nonZeroPixels = 0;
+      let totalPixels = imageData.data.length / 4;
+      
+      for (let i = 0; i < imageData.data.length; i += 4) {
+        const r = imageData.data[i];
+        const g = imageData.data[i + 1];
+        const b = imageData.data[i + 2];
+        const a = imageData.data[i + 3];
+        
+        if (r > 10 || g > 10 || b > 10) { // 不是纯黑色
+          nonZeroPixels++;
+        }
+      }
+      
+      const contentRatio = nonZeroPixels / totalPixels;
+      console.log('照片内容分析:', {
+        totalPixels,
+        nonZeroPixels,
+        contentRatio: (contentRatio * 100).toFixed(2) + '%'
+      });
+      
+      if (contentRatio < 0.01) { // 少于1%的非黑色像素
+        console.warn('画布内容几乎全黑，可能是摄像头问题');
+        // 尝试使用不同的摄像头设置
         return;
       }
 
@@ -138,6 +172,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ isActive, onPhotoTaken, i
       const photoData = canvas.toDataURL('image/jpeg', 0.9);
       
       console.log('照片拍摄成功，大小:', photoData.length, '字节');
+      console.log('照片数据预览:', photoData.substring(0, 100) + '...');
       
       // 调用回调函数
       onPhotoTaken(photoData);
