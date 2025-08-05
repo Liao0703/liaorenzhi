@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>照片识别功能同步测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>📷 照片识别功能同步测试</h1>
+    
+    <div class="test-section">
+        <h2>🌐 服务器连接测试</h2>
+        <div id="server-status" class="status info">正在检查服务器状态...</div>
+        <button onclick="checkServerStatus()">重新检查</button>
+    </div>
+
+    <div class="test-section">
+        <h2>📦 功能模块测试</h2>
+        <div id="module-status" class="status info">正在检查功能模块...</div>
+        <button onclick="checkModules()">重新检查</button>
+    </div>
+
+    <div class="test-section">
+        <h2>🔧 API 接口测试</h2>
+        <div id="api-status" class="status info">正在检查API接口...</div>
+        <button onclick="checkAPIs()">重新检查</button>
+    </div>
+
+    <div class="test-section">
+        <h2>📋 测试日志</h2>
+        <div id="test-log" class="log"></div>
+        <button onclick="clearLog()">清除日志</button>
+    </div>
+
+    <div class="test-section">
+        <h2>🎯 快速访问</h2>
+        <a href="http://116.62.65.246:3000/" target="_blank">
+            <button>访问主页面</button>
+        </a>
+        <a href="http://116.62.65.246:3000/camera-test" target="_blank">
+            <button>访问摄像头测试</button>
+        </a>
+        <a href="http://116.62.65.246:3000/health" target="_blank">
+            <button>健康检查</button>
+        </a>
+    </div>
+
+    <script>
+        const SERVER_URL = 'http://116.62.65.246:3000';
+        let testResults = [];
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            testResults.push({ message: logEntry, type });
+            
+            const logElement = document.getElementById('test-log');
+            logElement.innerHTML = testResults.map(result => 
+                `<div style="color: ${result.type === 'error' ? 'red' : result.type === 'success' ? 'green' : 'blue'}">${result.message}</div>`
+            ).join('');
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function clearLog() {
+            testResults = [];
+            document.getElementById('test-log').innerHTML = '';
+        }
+
+        function updateStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `status ${type}`;
+        }
+
+        async function checkServerStatus() {
+            log('开始检查服务器状态...');
+            updateStatus('server-status', '正在检查...', 'info');
+
+            try {
+                // 检查健康状态
+                log('🔍 正在检查健康状态...');
+                const healthResponse = await fetch(`${SERVER_URL}/health`, {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                log(`📊 健康检查响应状态: ${healthResponse.status} ${healthResponse.statusText}`);
+                
+                if (healthResponse.ok) {
+                    const healthData = await healthResponse.json();
+                    log(`✅ 健康检查通过: ${JSON.stringify(healthData)}`, 'success');
+                    
+                    // 检查主页面
+                    log('🔍 正在检查主页面...');
+                    const mainResponse = await fetch(SERVER_URL, {
+                        method: 'GET',
+                        mode: 'cors'
+                    });
+                    
+                    log(`📊 主页面响应状态: ${mainResponse.status} ${mainResponse.statusText}`);
+                    
+                    if (mainResponse.ok) {
+                        log('✅ 主页面访问正常', 'success');
+                        updateStatus('server-status', '✅ 服务器运行正常', 'success');
+                    } else {
+                        log(`❌ 主页面访问失败: ${mainResponse.status} ${mainResponse.statusText}`, 'error');
+                        updateStatus('server-status', '❌ 主页面访问失败', 'error');
+                    }
+                } else {
+                    log(`❌ 健康检查失败: ${healthResponse.status} ${healthResponse.statusText}`, 'error');
+                    updateStatus('server-status', '❌ 健康检查失败', 'error');
+                }
+            } catch (error) {
+                log(`❌ 服务器连接失败: ${error.message}`, 'error');
+                log(`🔍 错误详情: ${error.stack}`, 'error');
+                updateStatus('server-status', '❌ 服务器连接失败', 'error');
+            }
+        }
+
+        async function checkModules() {
+            log('开始检查功能模块...');
+            updateStatus('module-status', '正在检查...', 'info');
+
+            try {
+                // 检查主页面是否包含照片识别相关功能
+                const mainResponse = await fetch(SERVER_URL);
+                const mainHtml = await mainResponse.text();
+                
+                const modules = [
+                    { name: 'CameraCapture', pattern: /CameraCapture/ },
+                    { name: 'FaceRecognition', pattern: /faceRecognition/ },
+                    { name: 'PhotoStorage', pattern: /photoStorage/ },
+                    { name: 'CameraTest', pattern: /camera-test/ }
+                ];
+
+                let foundModules = 0;
+                modules.forEach(module => {
+                    if (module.pattern.test(mainHtml)) {
+                        log(`✅ 找到模块: ${module.name}`, 'success');
+                        foundModules++;
+                    } else {
+                        log(`⚠️ 未找到模块: ${module.name}`, 'warning');
+                    }
+                });
+
+                if (foundModules >= 2) {
+                    updateStatus('module-status', `✅ 找到 ${foundModules} 个功能模块`, 'success');
+                } else {
+                    updateStatus('module-status', `⚠️ 仅找到 ${foundModules} 个功能模块`, 'warning');
+                }
+            } catch (error) {
+                log(`❌ 模块检查失败: ${error.message}`, 'error');
+                updateStatus('module-status', '❌ 模块检查失败', 'error');
+            }
+        }
+
+        async function checkAPIs() {
+            log('开始检查API接口...');
+            updateStatus('api-status', '正在检查...', 'info');
+
+            try {
+                // 检查API状态
+                log('🔍 正在检查API状态...');
+                const apiResponse = await fetch(`${SERVER_URL}/api/status`, {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                log(`📊 API响应状态: ${apiResponse.status} ${apiResponse.statusText}`);
+                
+                if (apiResponse.ok) {
+                    const apiData = await apiResponse.json();
+                    log(`✅ API状态正常: ${JSON.stringify(apiData)}`, 'success');
+                    updateStatus('api-status', '✅ API接口正常', 'success');
+                } else {
+                    log(`❌ API状态检查失败: ${apiResponse.status} ${apiResponse.statusText}`, 'error');
+                    updateStatus('api-status', '❌ API接口异常', 'error');
+                }
+            } catch (error) {
+                log(`❌ API检查失败: ${error.message}`, 'error');
+                log(`🔍 错误详情: ${error.stack}`, 'error');
+                updateStatus('api-status', '❌ API检查失败', 'error');
+            }
+        }
+
+        // 页面加载时自动运行测试
+        window.onload = function() {
+            log('🚀 照片识别功能同步测试开始');
+            log(`🌐 目标服务器: ${SERVER_URL}`);
+            
+            setTimeout(() => checkServerStatus(), 500);
+            setTimeout(() => checkModules(), 1000);
+            setTimeout(() => checkAPIs(), 1500);
+        };
+    </script>
+</body>
+</html> 

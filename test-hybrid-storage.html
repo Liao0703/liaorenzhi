@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>混合存储测试</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .test-panel {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            backdrop-filter: blur(10px);
+        }
+        .test-result {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        button {
+            background: linear-gradient(90deg, #10b981 60%, #059669 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        button:disabled {
+            background: rgba(255, 255, 255, 0.2);
+            cursor: not-allowed;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        .status.success { background: rgba(16, 185, 129, 0.2); }
+        .status.error { background: rgba(239, 68, 68, 0.2); }
+        .status.info { background: rgba(59, 130, 246, 0.2); }
+    </style>
+</head>
+<body>
+    <h1>🔧 混合存储功能测试</h1>
+    
+    <div class="test-panel">
+        <h2>📊 存储状态检查</h2>
+        <button onclick="checkStorageStatus()">检查存储状态</button>
+        <div id="storage-status" class="test-result"></div>
+    </div>
+
+    <div class="test-panel">
+        <h2>📤 文件上传测试</h2>
+        <input type="file" id="file-input" accept=".pdf,.doc,.docx,.txt">
+        <button onclick="testFileUpload()">测试上传</button>
+        <div id="upload-result" class="test-result"></div>
+    </div>
+
+    <div class="test-panel">
+        <h2>📁 文件列表测试</h2>
+        <button onclick="testGetFiles()">获取文件列表</button>
+        <div id="files-result" class="test-result"></div>
+    </div>
+
+    <div class="test-panel">
+        <h2>🔄 同步功能测试</h2>
+        <button onclick="testSync()">测试同步到服务器</button>
+        <button onclick="testCleanup()">测试清理缓存</button>
+        <div id="sync-result" class="test-result"></div>
+    </div>
+
+    <script type="module">
+        // 动态导入混合存储服务
+        import { HybridStorageService, getStorageStatus } from './src/hybridStorageService.js';
+        
+        window.HybridStorageService = HybridStorageService;
+        window.getStorageStatus = getStorageStatus;
+
+        // 检查存储状态
+        window.checkStorageStatus = function() {
+            try {
+                const status = getStorageStatus();
+                document.getElementById('storage-status').textContent = JSON.stringify(status, null, 2);
+                
+                // 显示状态信息
+                const statusDiv = document.createElement('div');
+                statusDiv.className = 'status info';
+                statusDiv.innerHTML = `
+                    <strong>存储模式:</strong> ${status.message}<br>
+                    <strong>本地存储:</strong> ${status.localEnabled ? '✅ 启用' : '❌ 禁用'}<br>
+                    <strong>云服务器:</strong> ${status.serverEnabled ? '✅ 启用' : '❌ 禁用'}<br>
+                    <strong>本地文件数:</strong> ${status.localStats?.files || 0}<br>
+                    <strong>本地存储使用:</strong> ${(status.localStats?.usage || 0).toFixed(1)}%
+                `;
+                
+                const container = document.getElementById('storage-status');
+                container.innerHTML = '';
+                container.appendChild(statusDiv);
+                container.appendChild(document.createTextNode(JSON.stringify(status, null, 2)));
+                
+            } catch (error) {
+                document.getElementById('storage-status').textContent = `错误: ${error.message}`;
+            }
+        };
+
+        // 测试文件上传
+        window.testFileUpload = async function() {
+            const fileInput = document.getElementById('file-input');
+            const result = document.getElementById('upload-result');
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                result.textContent = '请先选择一个文件';
+                return;
+            }
+            
+            try {
+                result.textContent = '正在上传...';
+                const file = fileInput.files[0];
+                const uploadResult = await HybridStorageService.uploadFile(file);
+                
+                result.textContent = JSON.stringify(uploadResult, null, 2);
+                
+                if (uploadResult.success) {
+                    const statusDiv = document.createElement('div');
+                    statusDiv.className = 'status success';
+                    statusDiv.textContent = '✅ 文件上传成功！混合存储正常工作';
+                    result.insertBefore(statusDiv, result.firstChild);
+                } else {
+                    const statusDiv = document.createElement('div');
+                    statusDiv.className = 'status error';
+                    statusDiv.textContent = '❌ 文件上传失败';
+                    result.insertBefore(statusDiv, result.firstChild);
+                }
+                
+            } catch (error) {
+                result.textContent = `错误: ${error.message}`;
+            }
+        };
+
+        // 测试获取文件列表
+        window.testGetFiles = async function() {
+            try {
+                const files = await HybridStorageService.getAllFiles();
+                const stats = await HybridStorageService.getStorageStats();
+                
+                const result = document.getElementById('files-result');
+                result.textContent = JSON.stringify({ files, stats }, null, 2);
+                
+                const statusDiv = document.createElement('div');
+                statusDiv.className = 'status info';
+                statusDiv.innerHTML = `
+                    <strong>总文件数:</strong> ${files.length}<br>
+                    <strong>本地文件:</strong> ${stats.localFiles}<br>
+                    <strong>服务器文件:</strong> ${stats.serverFiles}<br>
+                    <strong>总大小:</strong> ${(stats.totalSize / 1024 / 1024).toFixed(2)} MB
+                `;
+                result.insertBefore(statusDiv, result.firstChild);
+                
+            } catch (error) {
+                document.getElementById('files-result').textContent = `错误: ${error.message}`;
+            }
+        };
+
+        // 测试同步功能
+        window.testSync = async function() {
+            try {
+                document.getElementById('sync-result').textContent = '正在同步到服务器...';
+                const result = await HybridStorageService.syncToServer();
+                
+                document.getElementById('sync-result').textContent = JSON.stringify(result, null, 2);
+                
+                const statusDiv = document.createElement('div');
+                statusDiv.className = 'status success';
+                statusDiv.textContent = `✅ 同步完成: 成功 ${result.success} 个，失败 ${result.failed} 个`;
+                document.getElementById('sync-result').insertBefore(statusDiv, document.getElementById('sync-result').firstChild);
+                
+            } catch (error) {
+                document.getElementById('sync-result').textContent = `错误: ${error.message}`;
+            }
+        };
+
+        // 测试清理功能
+        window.testCleanup = async function() {
+            try {
+                document.getElementById('sync-result').textContent = '正在清理本地缓存...';
+                await HybridStorageService.clearLocalCache();
+                
+                const statusDiv = document.createElement('div');
+                statusDiv.className = 'status success';
+                statusDiv.textContent = '✅ 本地缓存清理完成';
+                document.getElementById('sync-result').textContent = '清理完成';
+                document.getElementById('sync-result').insertBefore(statusDiv, document.getElementById('sync-result').firstChild);
+                
+            } catch (error) {
+                document.getElementById('sync-result').textContent = `错误: ${error.message}`;
+            }
+        };
+
+        // 页面加载时自动检查状态
+        window.addEventListener('load', () => {
+            setTimeout(checkStorageStatus, 1000);
+        });
+    </script>
+</body>
+</html>

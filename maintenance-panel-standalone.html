@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>维护人员管理面板</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .tab-button {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            margin: 0 5px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+        }
+
+        .tab-button:hover, .tab-button.active {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: none;
+        }
+
+        .panel.active {
+            display: block;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            border-color: #667eea;
+            outline: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .table th, .table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .table tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .status {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status.enabled {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.disabled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            border-left: 4px solid;
+        }
+
+        .alert.success {
+            background-color: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+
+        .alert.info {
+            background-color: #d1ecf1;
+            border-color: #17a2b8;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 维护人员管理面板</h1>
+            <p>用户管理 & 系统维护</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-button active" onclick="showTab('users')">👥 用户管理</button>
+            <button class="tab-button" onclick="showTab('maintenance')">🛠️ 系统维护</button>
+        </div>
+
+        <!-- 用户管理面板 -->
+        <div id="users-panel" class="panel active">
+            <div class="alert success">
+                <strong>✅ 用户管理系统已就绪</strong> - 您可以管理所有用户账户
+            </div>
+
+            <div class="grid">
+                <div class="section">
+                    <h3>📝 添加新用户</h3>
+                    <form id="add-user-form">
+                        <div class="form-group">
+                            <label>用户名:</label>
+                            <input type="text" id="username" placeholder="输入用户名" required>
+                        </div>
+                        <div class="form-group">
+                            <label>密码:</label>
+                            <input type="password" id="password" placeholder="输入密码" required>
+                        </div>
+                        <div class="form-group">
+                            <label>姓名:</label>
+                            <input type="text" id="realName" placeholder="输入真实姓名" required>
+                        </div>
+                        <div class="form-group">
+                            <label>工号:</label>
+                            <input type="text" id="employeeId" placeholder="自动生成" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>部门:</label>
+                            <select id="department">
+                                <option value="机务段">机务段</option>
+                                <option value="客运段">客运段</option>
+                                <option value="工务段">工务段</option>
+                                <option value="电务段">电务段</option>
+                                <option value="车务段">车务段</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>班组:</label>
+                            <input type="text" id="team" placeholder="输入班组">
+                        </div>
+                        <div class="form-group">
+                            <label>岗位:</label>
+                            <select id="jobType">
+                                <option value="司机">司机</option>
+                                <option value="检修员">检修员</option>
+                                <option value="调度员">调度员</option>
+                                <option value="信号工">信号工</option>
+                                <option value="列车员">列车员</option>
+                                <option value="维护员">维护员</option>
+                                <option value="管理员">管理员</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>角色:</label>
+                            <select id="role">
+                                <option value="user">普通用户</option>
+                                <option value="maintenance">维护人员</option>
+                                <option value="admin">管理员</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>所属公司:</label>
+                            <input type="text" id="company" value="中国铁路" placeholder="输入公司名称">
+                        </div>
+                        <button type="submit" class="btn">➕ 添加用户</button>
+                        <button type="button" class="btn" onclick="generateEmployeeId()">🔄 生成工号</button>
+                    </form>
+                </div>
+
+                <div class="section">
+                    <h3>📊 用户列表</h3>
+                    <table class="table" id="users-table">
+                        <thead>
+                            <tr>
+                                <th>用户名</th>
+                                <th>姓名</th>
+                                <th>工号</th>
+                                <th>部门</th>
+                                <th>角色</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-tbody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 系统维护面板 -->
+        <div id="maintenance-panel" class="panel">
+            <div class="alert info">
+                <strong>🛠️ 系统维护控制台</strong> - 管理系统维护模式和监控
+            </div>
+
+            <div class="grid">
+                <div class="section">
+                    <h3>🔧 维护模式控制</h3>
+                    <div id="maintenance-status"></div>
+                    
+                    <form id="maintenance-form">
+                        <div class="form-group">
+                            <label>维护原因:</label>
+                            <select id="maintenance-reason">
+                                <option value="系统升级">系统升级</option>
+                                <option value="数据备份">数据备份</option>
+                                <option value="服务器维护">服务器维护</option>
+                                <option value="安全更新">安全更新</option>
+                                <option value="性能优化">性能优化</option>
+                                <option value="紧急修复">紧急修复</option>
+                                <option value="其他">其他</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>详细说明:</label>
+                            <textarea id="maintenance-message" rows="3" placeholder="请输入详细的维护说明..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>预计完成时间:</label>
+                            <input type="datetime-local" id="maintenance-end-time">
+                        </div>
+                        <div class="form-group">
+                            <label>维护人员:</label>
+                            <input type="text" id="maintenance-operator" placeholder="输入维护人员姓名">
+                        </div>
+                        <button type="button" class="btn btn-danger" onclick="enableMaintenance()">🔒 启用维护模式</button>
+                        <button type="button" class="btn btn-success" onclick="disableMaintenance()">✅ 禁用维护模式</button>
+                    </form>
+                </div>
+
+                <div class="section">
+                    <h3>📈 维护历史记录</h3>
+                    <div id="maintenance-history"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 模拟用户数据
+        let users = [
+            {
+                id: 1,
+                username: 'admin',
+                realName: '系统管理员',
+                employeeId: 'EMP001',
+                department: '信息中心',
+                team: '系统组',
+                jobType: '管理员',
+                role: 'admin',
+                company: '中国铁路'
+            },
+            {
+                id: 2,
+                username: 'maintenance',
+                realName: '维护人员',
+                employeeId: 'EMP002',
+                department: '机务段',
+                team: '维护组',
+                jobType: '维护员',
+                role: 'maintenance',
+                company: '中国铁路'
+            },
+            {
+                id: 3,
+                username: 'user',
+                realName: '普通用户',
+                employeeId: 'EMP003',
+                department: '客运段',
+                team: '乘务组',
+                jobType: '列车员',
+                role: 'user',
+                company: '中国铁路'
+            }
+        ];
+
+        // 维护模式数据
+        let maintenanceData = JSON.parse(localStorage.getItem('maintenance') || '{"enabled": false, "history": []}');
+
+        // 切换标签页
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.panel').forEach(panel => panel.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName + '-panel').classList.add('active');
+            
+            if (tabName === 'users') {
+                renderUsers();
+            } else if (tabName === 'maintenance') {
+                renderMaintenanceStatus();
+                renderMaintenanceHistory();
+            }
+        }
+
+        // 生成工号
+        function generateEmployeeId() {
+            const id = 'EMP' + String(Date.now()).slice(-6);
+            document.getElementById('employeeId').value = id;
+        }
+
+        // 渲染用户列表
+        function renderUsers() {
+            const tbody = document.getElementById('users-tbody');
+            tbody.innerHTML = users.map(user => `
+                <tr>
+                    <td>${user.username}</td>
+                    <td>${user.realName}</td>
+                    <td>${user.employeeId}</td>
+                    <td>${user.department}</td>
+                    <td><span class="status ${user.role === 'admin' ? 'enabled' : 'disabled'}">${getRoleText(user.role)}</span></td>
+                    <td>
+                        <button class="btn" onclick="editUser(${user.id})">✏️ 编辑</button>
+                        <button class="btn btn-danger" onclick="deleteUser(${user.id})">🗑️ 删除</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function getRoleText(role) {
+            const roleMap = {
+                'admin': '管理员',
+                'maintenance': '维护人员',
+                'user': '普通用户'
+            };
+            return roleMap[role] || role;
+        }
+
+        // 添加用户
+        document.getElementById('add-user-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const newUser = {
+                id: users.length + 1,
+                username: document.getElementById('username').value,
+                realName: document.getElementById('realName').value,
+                employeeId: document.getElementById('employeeId').value || generateEmployeeId(),
+                department: document.getElementById('department').value,
+                team: document.getElementById('team').value,
+                jobType: document.getElementById('jobType').value,
+                role: document.getElementById('role').value,
+                company: document.getElementById('company').value
+            };
+
+            users.push(newUser);
+            renderUsers();
+            this.reset();
+            alert('✅ 用户添加成功！');
+        });
+
+        // 编辑用户
+        function editUser(id) {
+            const user = users.find(u => u.id === id);
+            if (user) {
+                document.getElementById('username').value = user.username;
+                document.getElementById('realName').value = user.realName;
+                document.getElementById('employeeId').value = user.employeeId;
+                document.getElementById('department').value = user.department;
+                document.getElementById('team').value = user.team;
+                document.getElementById('jobType').value = user.jobType;
+                document.getElementById('role').value = user.role;
+                document.getElementById('company').value = user.company;
+            }
+        }
+
+        // 删除用户
+        function deleteUser(id) {
+            if (confirm('确定要删除这个用户吗？')) {
+                users = users.filter(u => u.id !== id);
+                renderUsers();
+                alert('✅ 用户删除成功！');
+            }
+        }
+
+        // 维护模式管理
+        function renderMaintenanceStatus() {
+            const statusDiv = document.getElementById('maintenance-status');
+            const isEnabled = maintenanceData.enabled;
+            
+            statusDiv.innerHTML = `
+                <div class="alert ${isEnabled ? 'success' : 'info'}">
+                    <strong>当前状态: ${isEnabled ? '🔒 维护模式已启用' : '✅ 系统正常运行'}</strong>
+                    ${isEnabled ? `<br>原因: ${maintenanceData.reason}<br>说明: ${maintenanceData.message}` : ''}
+                </div>
+            `;
+        }
+
+        function enableMaintenance() {
+            const reason = document.getElementById('maintenance-reason').value;
+            const message = document.getElementById('maintenance-message').value;
+            const endTime = document.getElementById('maintenance-end-time').value;
+            const operator = document.getElementById('maintenance-operator').value;
+
+            maintenanceData = {
+                enabled: true,
+                reason: reason,
+                message: message,
+                endTime: endTime,
+                operator: operator,
+                startTime: new Date().toISOString(),
+                history: maintenanceData.history || []
+            };
+
+            localStorage.setItem('maintenance', JSON.stringify(maintenanceData));
+            renderMaintenanceStatus();
+            alert('🔒 维护模式已启用！');
+        }
+
+        function disableMaintenance() {
+            if (maintenanceData.enabled) {
+                // 添加到历史记录
+                maintenanceData.history.unshift({
+                    reason: maintenanceData.reason,
+                    message: maintenanceData.message,
+                    operator: maintenanceData.operator,
+                    startTime: maintenanceData.startTime,
+                    endTime: new Date().toISOString(),
+                    duration: Math.round((new Date() - new Date(maintenanceData.startTime)) / 1000 / 60) + ' 分钟'
+                });
+            }
+
+            maintenanceData.enabled = false;
+            localStorage.setItem('maintenance', JSON.stringify(maintenanceData));
+            renderMaintenanceStatus();
+            renderMaintenanceHistory();
+            alert('✅ 维护模式已禁用！');
+        }
+
+        function renderMaintenanceHistory() {
+            const historyDiv = document.getElementById('maintenance-history');
+            const history = maintenanceData.history || [];
+            
+            if (history.length === 0) {
+                historyDiv.innerHTML = '<p>暂无维护记录</p>';
+                return;
+            }
+
+            historyDiv.innerHTML = `
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>维护原因</th>
+                            <th>操作人员</th>
+                            <th>开始时间</th>
+                            <th>持续时间</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${history.slice(0, 10).map(record => `
+                            <tr>
+                                <td>${record.reason}</td>
+                                <td>${record.operator}</td>
+                                <td>${new Date(record.startTime).toLocaleString()}</td>
+                                <td>${record.duration}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            renderUsers();
+            renderMaintenanceStatus();
+            renderMaintenanceHistory();
+            generateEmployeeId();
+        });
+    </script>
+</body>
+</html> 

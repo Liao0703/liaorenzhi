@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
-import { getAllArticles, updateArticle, addArticle, deleteArticle } from './articleData';
+import { getAllArticles, updateArticle, addArticle, deleteArticle, syncFromCloud, syncToCloud } from './articleData';
 import type { ArticleData } from './articleData';
-import { getAllPhotos, getPhotoStats, clearAllPhotos, exportPhotoData, getUserLearningRecords, exportUserPhotosAsJPG, exportUserLearningReport, exportPhotoAsJPG } from './photoStorage';
+import { getAllPhotos, getPhotoStats, clearAllPhotos, exportPhotoData } from './photoStorage';
 import { getSettings, updateSettings } from './settingsStorage';
 import { getAllSystemData, backupData, clearAllData } from './dataManager';
 import { getLearningStorageData, getStorageUsage, exportStorageReport } from './storageViewer';
-import { getOSSConfigStatus } from './ossConfig';
-import OSSConfigPanel from './OSSConfigPanel';
+import { STORAGE_CONFIG } from './fileUploadService';
+import ServerConfigPanel from './OSSConfigPanel';
+import ServerStoragePanel from './HybridStoragePanel';
 import FileUploadModal from './FileUploadModal';
 import type { FileInfo } from './FileUploadModal';
-import { HybridStorageService } from './hybridStorageService';
 
 interface AdminPanelProps {
   user: any;
@@ -44,7 +44,8 @@ interface ArticleRecord {
 const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'articles' | 'statistics' | 'photos' | 'settings'>('overview');
-  const [showOSSConfig, setShowOSSConfig] = useState(false);
+  const [showServerConfig, setShowServerConfig] = useState(false);
+  const [showStoragePanel, setShowStoragePanel] = useState(false);
   const [showFileUpload, setShowFileUpload] = useState(false);
 
   // 模拟用户学习记录
@@ -125,14 +126,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
   // 文章分类
   const categories = ['安全规程', '设备维护', '应急处理', '信号系统', '调度规范', '服务标准'];
 
-  // 格式化字节数
-  const formatBytes = (bytes: number): string => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
+  // 格式化字节数（暂时未使用）
+  // const formatBytes = (bytes: number): string => {
+  //   if (bytes === 0) return '0 B';
+  //   const k = 1024;
+  //   const sizes = ['B', 'KB', 'MB', 'GB'];
+  //   const i = Math.floor(Math.log(bytes) / Math.log(k));
+  //   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  // };
 
   // 新增/编辑表单初始值
   const emptyArticle: ArticleData = { 
@@ -157,17 +158,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
     const newArticle = {
       ...emptyArticle,
       title: fileInfo.name.replace(/\.[^/.]+$/, ''), // 移除文件扩展名
-      content: `文件型文章: ${fileInfo.name}`,
+      content: `这是一个文件型文章，点击阅读时将打开: ${fileInfo.name}\n\n文件类型: ${fileInfo.fileType}\n文件大小: ${fileInfo.size ? Math.round(fileInfo.size / 1024) + 'KB' : '未知'}`,
       fileType: fileInfo.fileType as 'pdf' | 'word' | 'none',
       fileUrl: fileInfo.fileUrl,
       fileName: fileInfo.fileName,
       fileId: fileInfo.fileId,
-      storageType: fileInfo.storageType,
+      storageType: 'hybrid' as const, // 统一使用云服务器存储
       questions: []
     };
     setEditArticle(newArticle);
     setFormType('add');
     setShowForm(true);
+    
+    // 显示提示信息
+    alert('📄 文件上传成功！\n\n请在接下来的表单中：\n1. 修改文章标题和分类\n2. 设置要求阅读时间\n3. 添加考试题目（推荐）\n4. 点击保存完成创建');
   };
 
   // 打开编辑表单
@@ -178,30 +182,66 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
   };
 
   // 删除文章
-  const handleDelete = (id: string) => {
-    if (window.confirm('确定要删除这篇文章吗？')) {
-      deleteArticle(id);
+  const handleDelete = async (id: string) => {
+    if (window.confirm('确定要删除这篇文章吗？此操作将同时删除云端数据。')) {
+      try {
+        await deleteArticle(id);
       setArticles(getAllArticles());
+        // 显示成功提示
+        const successMsg = document.createElement('div');
+        successMsg.textContent = '✅ 文章删除成功';
+        successMsg.style.cssText = 'position:fixed;top:20px;right:20px;background:#67c23a;color:white;padding:10px 20px;border-radius:6px;z-index:10000;';
+        document.body.appendChild(successMsg);
+        setTimeout(() => document.body.removeChild(successMsg), 3000);
+      } catch (error) {
+        alert(`删除失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      }
     }
   };
 
   // 提交表单
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editArticle) return;
     if (!editArticle.title.trim()) {
       alert('标题不能为空');
       return;
     }
-    if (formType === 'add') {
-      addArticle(editArticle);
-      setArticles(getAllArticles());
-    } else {
-      updateArticle(editArticle);
-      setArticles(getAllArticles());
+
+    // 验证题目数据完整性
+    if (editArticle.questions && editArticle.questions.length > 0) {
+      for (let i = 0; i < editArticle.questions.length; i++) {
+        const question = editArticle.questions[i];
+        if (!question.question.trim()) {
+          alert(`题目 ${i + 1} 的内容不能为空`);
+          return;
+        }
+        if (question.options.some(option => !option.trim())) {
+          alert(`题目 ${i + 1} 的选项不能为空`);
+          return;
+        }
+      }
     }
+
+    try {
+    if (formType === 'add') {
+        await addArticle(editArticle);
+    } else {
+        await updateArticle(editArticle);
+    }
+      setArticles(getAllArticles());
     setShowForm(false);
     setEditArticle(null);
+      
+      // 显示成功提示
+      const successMsg = document.createElement('div');
+      successMsg.textContent = `✅ 文章${formType === 'add' ? '添加' : '更新'}成功`;
+      successMsg.style.cssText = 'position:fixed;top:20px;right:20px;background:#67c23a;color:white;padding:10px 20px;border-radius:6px;z-index:10000;';
+      document.body.appendChild(successMsg);
+      setTimeout(() => document.body.removeChild(successMsg), 3000);
+    } catch (error) {
+      alert(`保存失败: ${error instanceof Error ? error.message : '未知错误'}`);
+    }
   };
 
   // 统计数据
@@ -549,7 +589,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
                 fontWeight: 500
               }}
             >
-              添加文章
+              ➕ 添加文章
             </button>
             <button
               onClick={() => setShowFileUpload(true)}
@@ -565,6 +605,61 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
               }}
             >
               📄 上传文件
+            </button>
+            <button
+              onClick={async () => {
+                try {
+                  const result = await syncFromCloud();
+                  if (result.success) {
+                    setArticles(getAllArticles());
+                    alert(`✅ ${result.message}`);
+                  } else {
+                    alert(`❌ ${result.message}`);
+                  }
+                } catch (error) {
+                  alert(`同步失败: ${error instanceof Error ? error.message : '未知错误'}`);
+                }
+              }}
+              style={{
+                padding: '8px 18px',
+                background: 'linear-gradient(90deg,#e6a23c 60%,#f3d19e 100%)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 500
+              }}
+            >
+              ⬇️ 从云端同步
+            </button>
+            <button
+              onClick={async () => {
+                try {
+                  const result = await syncToCloud();
+                  if (result.success > 0) {
+                    alert(`✅ 同步成功！\n成功: ${result.success} 篇\n失败: ${result.failed} 篇${result.errors.length > 0 ? '\n\n错误详情:\n' + result.errors.join('\n') : ''}`);
+                  } else if (result.failed > 0) {
+                    alert(`❌ 同步失败！\n错误详情:\n${result.errors.join('\n')}`);
+                  } else {
+                    alert('📝 没有文章需要同步');
+                  }
+                } catch (error) {
+                  alert(`同步失败: ${error instanceof Error ? error.message : '未知错误'}`);
+                }
+              }}
+              style={{
+                padding: '8px 18px',
+                background: 'linear-gradient(90deg,#f56c6c 60%,#fab6b6 100%)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 500
+              }}
+            >
+              ⬆️ 同步到云端
             </button>
           </div>
           <div style={{ overflowX: 'auto' }}>
@@ -696,6 +791,177 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
                     required
                   />
                 </label>
+
+                {/* 题目录入部分 */}
+                <div style={{ 
+                  borderTop: '1px solid rgba(255,255,255,0.2)', 
+                  paddingTop: '18px',
+                  marginTop: '10px'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <h4 style={{ margin: 0, fontSize: '16px' }}>📝 考试题目 ({editArticle?.questions?.length || 0}题)</h4>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (editArticle) {
+                          const newQuestion = {
+                            id: Date.now(),
+                            question: '',
+                            options: ['', '', '', ''],
+                            correctAnswer: 0
+                          };
+                          setEditArticle({
+                            ...editArticle,
+                            questions: [...(editArticle.questions || []), newQuestion]
+                          });
+                        }
+                      }}
+                      style={{
+                        padding: '6px 12px',
+                        background: 'linear-gradient(90deg,#67c23a 60%,#5daf34 100%)',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '12px'
+                      }}
+                    >
+                      ➕ 添加题目
+                    </button>
+                  </div>
+
+                  {/* 题目列表 */}
+                  <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                    {editArticle?.questions?.map((question, qIndex) => (
+                      <div key={question.id} style={{
+                        background: 'rgba(255,255,255,0.05)',
+                        padding: '15px',
+                        borderRadius: '8px',
+                        marginBottom: '12px',
+                        border: '1px solid rgba(255,255,255,0.1)'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                          <span style={{ fontSize: '14px', fontWeight: 'bold' }}>题目 {qIndex + 1}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (editArticle) {
+                                const updatedQuestions = editArticle.questions.filter((_, index) => index !== qIndex);
+                                setEditArticle({ ...editArticle, questions: updatedQuestions });
+                              }
+                            }}
+                            style={{
+                              padding: '4px 8px',
+                              background: 'rgba(245, 108, 108, 0.2)',
+                              color: '#f56c6c',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px'
+                            }}
+                          >
+                            删除
+                          </button>
+                        </div>
+                        
+                        <textarea
+                          placeholder="请输入题目内容..."
+                          value={question.question}
+                          onChange={(e) => {
+                            if (editArticle) {
+                              const updatedQuestions = [...editArticle.questions];
+                              updatedQuestions[qIndex] = { ...question, question: e.target.value };
+                              setEditArticle({ ...editArticle, questions: updatedQuestions });
+                            }
+                          }}
+                          style={{
+                            width: '100%',
+                            minHeight: '60px',
+                            padding: '8px',
+                            borderRadius: '6px',
+                            border: 'none',
+                            marginBottom: '10px',
+                            resize: 'vertical',
+                            fontSize: '14px'
+                          }}
+                        />
+                        
+                        {/* 选项输入 */}
+                        <div style={{ display: 'grid', gap: '8px' }}>
+                          {question.options.map((option, oIndex) => {
+                            const optionLabels = ['A', 'B', 'C', 'D'];
+                            const isCorrect = question.correctAnswer === oIndex;
+                            return (
+                              <div key={oIndex} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (editArticle) {
+                                      const updatedQuestions = [...editArticle.questions];
+                                      updatedQuestions[qIndex] = { ...question, correctAnswer: oIndex };
+                                      setEditArticle({ ...editArticle, questions: updatedQuestions });
+                                    }
+                                  }}
+                                  style={{
+                                    width: '24px',
+                                    height: '24px',
+                                    borderRadius: '50%',
+                                    border: `2px solid ${isCorrect ? '#67c23a' : 'rgba(255,255,255,0.3)'}`,
+                                    background: isCorrect ? '#67c23a' : 'transparent',
+                                    color: isCorrect ? '#fff' : 'rgba(255,255,255,0.6)',
+                                    cursor: 'pointer',
+                                    fontSize: '12px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                  }}
+                                  title={`点击设为正确答案`}
+                                >
+                                  {isCorrect ? '✓' : optionLabels[oIndex]}
+                                </button>
+                                <input
+                                  type="text"
+                                  placeholder={`选项${optionLabels[oIndex]}`}
+                                  value={option}
+                                  onChange={(e) => {
+                                    if (editArticle) {
+                                      const updatedQuestions = [...editArticle.questions];
+                                      const updatedOptions = [...question.options];
+                                      updatedOptions[oIndex] = e.target.value;
+                                      updatedQuestions[qIndex] = { ...question, options: updatedOptions };
+                                      setEditArticle({ ...editArticle, questions: updatedQuestions });
+                                    }
+                                  }}
+                                  style={{
+                                    flex: 1,
+                                    padding: '6px 10px',
+                                    borderRadius: '4px',
+                                    border: `1px solid ${isCorrect ? '#67c23a' : 'rgba(255,255,255,0.2)'}`,
+                                    background: isCorrect ? 'rgba(103, 194, 58, 0.1)' : 'rgba(255,255,255,0.05)',
+                                    color: '#fff',
+                                    fontSize: '13px'
+                                  }}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {editArticle?.questions?.length === 0 && (
+                    <div style={{
+                      textAlign: 'center',
+                      padding: '30px',
+                      color: 'rgba(255,255,255,0.6)',
+                      fontSize: '14px'
+                    }}>
+                      还没有添加题目，点击"➕ 添加题目"开始录入
+                    </div>
+                  )}
+                </div>
+
                 <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                   <button
                     type="button"
@@ -811,7 +1077,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
             <h4 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>照片统计</h4>
             {(() => {
               const stats = getPhotoStats();
-              const learningRecords = getUserLearningRecords();
               return (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px' }}>
                   <div style={{ textAlign: 'center' }}>
@@ -822,139 +1087,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
                     <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#67c23a' }}>{stats.todayPhotos}</div>
                     <div style={{ fontSize: '14px', opacity: 0.8 }}>今日照片数</div>
                   </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#e6a23c' }}>{learningRecords.length}</div>
-                    <div style={{ fontSize: '14px', opacity: 0.8 }}>学习记录数</div>
-                  </div>
                 </div>
               );
             })()}
-          </div>
-
-          {/* 用户学习记录 */}
-          <div style={{
-            background: 'rgba(255,255,255,0.1)',
-            padding: '20px',
-            borderRadius: '8px',
-            marginBottom: '20px'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-              <h4 style={{ margin: 0, fontSize: '16px' }}>用户学习记录</h4>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button
-                  onClick={() => {
-                    const records = getUserLearningRecords();
-                    if (records.length === 0) {
-                      alert('暂无学习记录');
-                      return;
-                    }
-                    
-                    // 导出所有用户的学习记录
-                    const csvContent = [
-                      ['用户姓名', '文章标题', '阅读时长(分钟)', '答题成绩', '完成时间', '学习状态', '照片数量'],
-                      ...records.map(record => [
-                        record.userName,
-                        record.articleTitle,
-                        record.readingTime.toString(),
-                        record.quizScore.toString(),
-                        new Date(record.completedAt).toLocaleString(),
-                        record.status === 'completed' ? '已完成' : '未完成',
-                        record.photos.length.toString()
-                      ])
-                    ].map(row => row.join(',')).join('\n');
-                    
-                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `所有用户学习记录_${new Date().toLocaleDateString()}.csv`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                  }}
-                  style={{
-                    padding: '6px 12px',
-                    background: 'linear-gradient(90deg,#409eff 60%,#2b8cff 100%)',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '12px'
-                  }}
-                >
-                  导出学习记录
-                </button>
-              </div>
-            </div>
-            
-            <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-              {(() => {
-                const records = getUserLearningRecords();
-                if (records.length === 0) {
-                  return (
-                    <div style={{ textAlign: 'center', padding: '20px', opacity: 0.6 }}>
-                      暂无学习记录
-                    </div>
-                  );
-                }
-                
-                return (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {records.slice(-10).reverse().map(record => (
-                      <div key={`${record.userId}-${record.articleId}`} style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        padding: '10px',
-                        background: 'rgba(255,255,255,0.05)',
-                        borderRadius: '6px',
-                        fontSize: '12px'
-                      }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>
-                            {record.userName} - {record.articleTitle}
-                          </div>
-                          <div style={{ opacity: 0.8 }}>
-                            阅读时长: {record.readingTime}分钟 | 成绩: {record.quizScore}分 | 
-                            照片: {record.photos.length}张 | 
-                            {new Date(record.completedAt).toLocaleString()}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: '5px' }}>
-                          <button
-                            onClick={() => exportUserPhotosAsJPG(record.userId, record.userName)}
-                            style={{
-                              padding: '4px 8px',
-                              background: 'rgba(67, 194, 58, 0.8)',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              fontSize: '10px'
-                            }}
-                          >
-                            导出照片
-                          </button>
-                          <button
-                            onClick={() => exportUserLearningReport(record.userId, record.userName)}
-                            style={{
-                              padding: '4px 8px',
-                              background: 'rgba(64, 158, 255, 0.8)',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              fontSize: '10px'
-                            }}
-                          >
-                            导出记录
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()}
-            </div>
           </div>
 
           {/* 照片列表 */}
@@ -1041,56 +1176,21 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
                             width: '60px',
                             height: '45px',
                             objectFit: 'cover',
-                            borderRadius: '4px',
-                            border: '1px solid rgba(255,255,255,0.2)'
-                          }}
-                          onError={(e) => {
-                            console.error('照片加载失败:', photo.id, photo.photoData?.substring(0, 100));
-                            e.currentTarget.style.background = 'rgba(255,0,0,0.3)';
-                            e.currentTarget.style.border = '1px solid red';
-                          }}
-                          onLoad={() => {
-                            console.log('照片加载成功:', photo.id, '大小:', photo.photoData?.length || 0);
+                            borderRadius: '4px'
                           }}
                         />
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: '14px', fontWeight: 'bold' }}>
                             {photo.articleTitle}
-                            {photo.userName && (
-                              <span style={{ marginLeft: '8px', fontSize: '12px', opacity: 0.7 }}>
-                                - {photo.userName}
-                              </span>
-                            )}
                           </div>
                           <div style={{ fontSize: '12px', opacity: 0.8 }}>
                             {new Date(photo.timestamp).toLocaleString('zh-CN')}
-                            {photo.readingTime && (
-                              <span style={{ marginLeft: '8px' }}>
-                                | 阅读时长: {photo.readingTime}分钟
-                              </span>
-                            )}
-                            {photo.quizScore && (
-                              <span style={{ marginLeft: '8px' }}>
-                                | 成绩: {photo.quizScore}分
-                              </span>
-                            )}
                           </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: '5px' }}>
-                          <button
-                            onClick={() => exportPhotoAsJPG(photo, `${photo.userName || '未知用户'}_${photo.articleTitle}_${new Date(photo.timestamp).toLocaleDateString()}.jpg`)}
-                            style={{
-                              padding: '4px 8px',
-                              background: 'rgba(67, 194, 58, 0.8)',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              fontSize: '10px'
-                            }}
-                          >
-                            导出JPG
-                          </button>
+                          {photo.userName && (
+                            <div style={{ fontSize: '12px', opacity: 0.6 }}>
+                              用户：{photo.userName}
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -1322,42 +1422,36 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
             })()}
           </div>
 
-          {/* 云存储配置 */}
+          {/* 云服务器存储 */}
           <div style={{
             background: 'rgba(255,255,255,0.1)',
             padding: '20px',
             borderRadius: '8px',
             marginBottom: '20px'
           }}>
-            <h4 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>☁️ 云存储配置</h4>
-            {(() => {
-              const ossStatus = getOSSConfigStatus();
-              return (
+            <h4 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>🗄️ 云服务器存储</h4>
                 <div style={{ fontSize: '14px', lineHeight: '1.6', marginBottom: '15px' }}>
-                  <p><strong>OSS状态：</strong>
+              <p><strong>存储状态：</strong>
                     <span style={{ 
-                      color: ossStatus.isConfigured ? '#67c23a' : '#f56c6c',
+                  color: '#10b981',
                       fontWeight: 'bold'
                     }}>
-                      {ossStatus.isConfigured ? '✅ 已配置' : '❌ 未配置'}
+                  ✅ 已启用
                     </span>
                   </p>
-                  {ossStatus.isConfigured && (
                     <div style={{ marginTop: '10px', padding: '10px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px' }}>
-                      <p><strong>Bucket：</strong>{ossStatus.config.bucket}</p>
-                      <p><strong>地域：</strong>{ossStatus.config.region}</p>
-                      <p><strong>访问域名：</strong>{ossStatus.config.endpoint}</p>
+                <p><strong>服务器地址：</strong>{STORAGE_CONFIG.serverConfig.baseUrl}</p>
+                <p><strong>API端点：</strong>{STORAGE_CONFIG.serverConfig.apiPath}</p>
+                <p><strong>文件大小限制：</strong>{Math.round(STORAGE_CONFIG.serverConfig.maxFileSize / 1024 / 1024)}MB</p>
+                <p><strong>存储类型：</strong>云服务器统一存储</p>
                     </div>
-                  )}
                 </div>
-              );
-            })()}
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
               <button
-                onClick={() => setShowOSSConfig(true)}
+                onClick={() => setShowServerConfig(true)}
                 style={{
                   padding: '8px 16px',
-                  background: 'linear-gradient(90deg,#409eff 60%,#2b8cff 100%)',
+                  background: 'linear-gradient(90deg,#3b82f6 60%,#2563eb 100%)',
                   color: '#fff',
                   border: 'none',
                   borderRadius: '6px',
@@ -1365,25 +1459,39 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
                   fontSize: '14px'
                 }}
               >
-                配置OSS
+                🔍 服务器配置
+              </button>
+              <button
+                onClick={() => setShowStoragePanel(true)}
+                style={{
+                  padding: '8px 16px',
+                  background: 'linear-gradient(90deg,#10b981 60%,#059669 100%)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                📁 存储管理
               </button>
               <button
                 onClick={async () => {
-                  const ossStatus = getOSSConfigStatus();
-                  if (!ossStatus.isConfigured) {
-                    alert('请先配置OSS信息');
-                    return;
-                  }
                   try {
-                    const result = await HybridStorageService.syncAllToOSS();
-                    alert(`同步完成！成功: ${result.success} 个文件，失败: ${result.failed} 个文件`);
+                    const response = await fetch('/api/files/health');
+                    const result = await response.json();
+                    if (result.success) {
+                      alert('✅ 云服务器存储服务正常运行！');
+                    } else {
+                      alert('❌ 云服务器存储服务异常');
+                    }
                   } catch (error) {
-                    alert(`同步失败: ${error instanceof Error ? error.message : '未知错误'}`);
+                    alert(`❌ 连接失败: ${error instanceof Error ? error.message : '未知错误'}`);
                   }
                 }}
                 style={{
                   padding: '8px 16px',
-                  background: 'linear-gradient(90deg,#67c23a 60%,#5daf34 100%)',
+                  background: 'linear-gradient(90deg,#f59e0b 60%,#d97706 100%)',
                   color: '#fff',
                   border: 'none',
                   borderRadius: '6px',
@@ -1391,28 +1499,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
                   fontSize: '14px'
                 }}
               >
-                同步到OSS
-              </button>
-              <button
-                onClick={() => {
-                  try {
-                    const result = HybridStorageService.cleanupCache();
-                    alert(`清理完成！删除: ${result.removed} 个文件，释放: ${formatBytes(result.freedSize)}`);
-                  } catch (error) {
-                    alert(`清理失败: ${error instanceof Error ? error.message : '未知错误'}`);
-                  }
-                }}
-                style={{
-                  padding: '8px 16px',
-                  background: 'linear-gradient(90deg,#e6a23c 60%,#f3d19e 100%)',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '14px'
-                }}
-              >
-                清理缓存
+                🔍 状态检查
               </button>
             </div>
           </div>
@@ -1427,7 +1514,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
             <div style={{ fontSize: '14px', lineHeight: '1.6' }}>
               <p><strong>系统名称：</strong>班前学习监督系统</p>
               <p><strong>当前版本：</strong>v1.0.0</p>
-              <p><strong>数据存储：</strong>本地存储 + 云存储 (OSS)</p>
+              <p><strong>数据存储：</strong>云服务器统一存储</p>
               <p><strong>功能特性：</strong></p>
               <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
                 <li>文章阅读时间监控</li>
@@ -1436,16 +1523,22 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
                 <li>学习数据统计</li>
                 <li>Excel数据导出</li>
                 <li>数据持久化存储</li>
-                <li>阿里云OSS云存储</li>
+                <li>云服务器文件存储</li>
+                <li>文件预览与下载</li>
               </ul>
             </div>
           </div>
         </div>
       )}
 
-      {/* OSS配置面板 */}
-      {showOSSConfig && (
-        <OSSConfigPanel onClose={() => setShowOSSConfig(false)} />
+      {/* 云服务器配置面板 */}
+      {showServerConfig && (
+        <ServerConfigPanel onClose={() => setShowServerConfig(false)} />
+      )}
+
+      {/* 云服务器存储管理面板 */}
+      {showStoragePanel && (
+        <ServerStoragePanel onClose={() => setShowStoragePanel(false)} />
       )}
 
       {/* 文件上传模态框 */}

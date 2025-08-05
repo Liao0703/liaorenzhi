@@ -3,13 +3,15 @@ export interface SystemSettings {
   cameraInterval: number; // 摄像头拍照间隔（秒）
   defaultReadingTime: number; // 默认阅读时间（分钟）
   maxPhotos: number; // 最大照片存储数量
+  enableFaceRecognition: boolean; // 是否启用人脸识别
 }
 
 // 默认设置
 const defaultSettings: SystemSettings = {
   cameraInterval: 30,
   defaultReadingTime: 30,
-  maxPhotos: 1000
+  maxPhotos: 1000,
+  enableFaceRecognition: false
 };
 
 // 从localStorage加载设置

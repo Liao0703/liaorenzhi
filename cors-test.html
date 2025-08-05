@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CORS 测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-result {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .success { border-left-color: #28a745; }
+        .error { border-left-color: #dc3545; }
+        .info { border-left-color: #17a2b8; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 CORS 跨域测试</h1>
+    
+    <div class="test-result info">
+        <h3>测试目标</h3>
+        <p>服务器: <strong>http://116.62.65.246:3000</strong></p>
+        <p>当前页面: <strong id="current-url"></strong></p>
+    </div>
+
+    <div class="test-result">
+        <h3>测试操作</h3>
+        <button onclick="testHealth()">测试健康检查</button>
+        <button onclick="testAPI()">测试API状态</button>
+        <button onclick="testMainPage()">测试主页面</button>
+        <button onclick="clearLog()">清除日志</button>
+    </div>
+
+    <div class="test-result">
+        <h3>测试日志</h3>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        const SERVER_URL = 'http://116.62.65.246:3000';
+        let logContent = '';
+
+        // 显示当前页面URL
+        document.getElementById('current-url').textContent = window.location.href;
+
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logContent += `[${timestamp}] ${message}\n`;
+            document.getElementById('log').textContent = logContent;
+            document.getElementById('log').scrollTop = document.getElementById('log').scrollHeight;
+        }
+
+        function clearLog() {
+            logContent = '';
+            document.getElementById('log').textContent = '';
+        }
+
+        async function testHealth() {
+            log('=== 开始测试健康检查 ===');
+            try {
+                log('发送请求到: ' + SERVER_URL + '/health');
+                const response = await fetch(SERVER_URL + '/health', {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                log('响应状态: ' + response.status + ' ' + response.statusText);
+                log('响应头:');
+                for (let [key, value] of response.headers.entries()) {
+                    log('  ' + key + ': ' + value);
+                }
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log('响应数据: ' + JSON.stringify(data, null, 2));
+                    log('✅ 健康检查成功');
+                } else {
+                    log('❌ 健康检查失败');
+                }
+            } catch (error) {
+                log('❌ 请求失败: ' + error.message);
+                log('错误详情: ' + error.stack);
+            }
+            log('=== 健康检查测试结束 ===\n');
+        }
+
+        async function testAPI() {
+            log('=== 开始测试API状态 ===');
+            try {
+                log('发送请求到: ' + SERVER_URL + '/api/status');
+                const response = await fetch(SERVER_URL + '/api/status', {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                log('响应状态: ' + response.status + ' ' + response.statusText);
+                log('响应头:');
+                for (let [key, value] of response.headers.entries()) {
+                    log('  ' + key + ': ' + value);
+                }
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log('响应数据: ' + JSON.stringify(data, null, 2));
+                    log('✅ API状态检查成功');
+                } else {
+                    log('❌ API状态检查失败');
+                }
+            } catch (error) {
+                log('❌ 请求失败: ' + error.message);
+                log('错误详情: ' + error.stack);
+            }
+            log('=== API状态测试结束 ===\n');
+        }
+
+        async function testMainPage() {
+            log('=== 开始测试主页面 ===');
+            try {
+                log('发送请求到: ' + SERVER_URL);
+                const response = await fetch(SERVER_URL, {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+                
+                log('响应状态: ' + response.status + ' ' + response.statusText);
+                log('响应头:');
+                for (let [key, value] of response.headers.entries()) {
+                    log('  ' + key + ': ' + value);
+                }
+                
+                if (response.ok) {
+                    const text = await response.text();
+                    log('响应长度: ' + text.length + ' 字符');
+                    log('响应预览: ' + text.substring(0, 200) + '...');
+                    log('✅ 主页面访问成功');
+                } else {
+                    log('❌ 主页面访问失败');
+                }
+            } catch (error) {
+                log('❌ 请求失败: ' + error.message);
+                log('错误详情: ' + error.stack);
+            }
+            log('=== 主页面测试结束 ===\n');
+        }
+
+        // 页面加载时显示基本信息
+        log('🚀 CORS 测试页面已加载');
+        log('目标服务器: ' + SERVER_URL);
+        log('当前页面: ' + window.location.href);
+        log('浏览器: ' + navigator.userAgent);
+        log('');
+    </script>
+</body>
+</html> 

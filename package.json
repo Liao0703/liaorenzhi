@@ -9,14 +9,16 @@
     "type-check": "tsc -b",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "node server.js",
+    "start": "node server.cjs",
     "serve": "npm run build && npm start"
   },
   "dependencies": {
     "ali-oss": "^6.23.0",
     "express": "^4.21.2",
+    "face-api.js": "^0.22.2",
     "file-saver": "^2.0.5",
     "mammoth": "^1.9.1",
+    "node-fetch": "^3.3.2",
     "pdfjs-dist": "^5.4.54",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

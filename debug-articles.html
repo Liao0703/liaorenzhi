@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>文章数据调试</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <h1>文章数据调试</h1>
+    <div id="output"></div>
+    
+    <script>
+        function checkArticles() {
+            const output = document.getElementById('output');
+            const articles = JSON.parse(localStorage.getItem('learning_articles') || '[]');
+            
+            output.innerHTML = '<h2>文章数量: ' + articles.length + '</h2>';
+            
+            articles.forEach((article, index) => {
+                const div = document.createElement('div');
+                div.style.border = '1px solid #ccc';
+                div.style.margin = '10px';
+                div.style.padding = '10px';
+                
+                div.innerHTML = `
+                    <h3>文章 ${index + 1}: ${article.title}</h3>
+                    <p><strong>分类:</strong> ${article.category}</p>
+                    <p><strong>题目数量:</strong> ${article.questions ? article.questions.length : 0}</p>
+                    <p><strong>文件类型:</strong> ${article.fileType || 'none'}</p>
+                    <p><strong>文件URL:</strong> ${article.fileUrl || '无'}</p>
+                    ${article.questions && article.questions.length > 0 ? 
+                        '<h4>题目列表:</h4>' + 
+                        article.questions.map((q, qIndex) => `
+                            <div style="margin-left: 20px; margin-bottom: 10px;">
+                                <p><strong>题目 ${qIndex + 1}:</strong> ${q.question}</p>
+                                <p><strong>选项:</strong></p>
+                                <ul>
+                                    ${q.options.map((opt, optIndex) => 
+                                        `<li>${opt} ${q.correctAnswer === optIndex ? '(正确答案)' : ''}</li>`
+                                    ).join('')}
+                                </ul>
+                            </div>
+                        `).join('') : 
+                        '<p style="color: red;">⚠️ 没有题目</p>'
+                    }
+                `;
+                
+                output.appendChild(div);
+            });
+        }
+        
+        // 页面加载时检查
+        checkArticles();
+        
+        // 添加刷新按钮
+        const refreshBtn = document.createElement('button');
+        refreshBtn.textContent = '刷新数据';
+        refreshBtn.onclick = checkArticles;
+        document.body.insertBefore(refreshBtn, document.getElementById('output'));
+    </script>
+</body>
+</html> 

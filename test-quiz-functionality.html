@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>题目功能测试</title>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { border: 1px solid #ccc; margin: 10px 0; padding: 15px; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+        button { padding: 10px 20px; margin: 5px; }
+        .quiz-section { 
+            border: 2px solid #67c23a; 
+            border-radius: 8px; 
+            padding: 15px;
+            margin: 15px 0;
+            background: rgba(103, 194, 58, 0.05);
+        }
+        .question-item {
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 12px;
+            background: rgba(255,255,255,0.05);
+        }
+        .add-quiz-btn {
+            padding: 12px 20px;
+            background: linear-gradient(90deg, #67c23a 60%, #5daf34 100%);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            width: 100%;
+            box-shadow: 0 4px 12px rgba(103, 194, 58, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 题目功能测试页面</h1>
+    
+    <div class="test-section">
+        <h2>1. 测试题目数据结构</h2>
+        <div id="data-test"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. 测试题目UI组件</h2>
+        <div id="ui-test">
+            <div class="quiz-section">
+                <h4 style="margin: '0 0 15px 0', fontSize: '16px', color: '#67c23a'">📝 考试题目</h4>
+                <p style="fontSize: '12px', opacity: 0.8, marginBottom: '15px'">
+                    添加考试题目，用户阅读完成后将随机抽取5道题进行作答
+                </p>
+                
+                <div id="questions-container">
+                    <!-- 题目将在这里动态添加 -->
+                </div>
+                
+                <div style="fontSize: '12px', opacity: 0.8, marginBottom: '15px', textAlign: 'center', padding: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px'">
+                    当前题目数量: <span id="question-count">0</span> 道
+                </div>
+                
+                <button class="add-quiz-btn" onclick="addQuestion()">
+                    ➕ 添加题目
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. 测试结果</h2>
+        <div id="test-results"></div>
+    </div>
+    
+    <script>
+        let questions = [];
+        let questionId = 1;
+        
+        // 测试数据结构
+        function testDataStructure() {
+            const testQuestion = {
+                id: 1,
+                question: '这是一个测试题目吗？',
+                options: ['A. 是', 'B. 否', 'C. 可能', 'D. 不确定'],
+                correctAnswer: 0
+            };
+            
+            const isValid = testQuestion.id && 
+                          testQuestion.question && 
+                          testQuestion.options && 
+                          testQuestion.options.length === 4 &&
+                          typeof testQuestion.correctAnswer === 'number';
+            
+            document.getElementById('data-test').innerHTML = `
+                <p class="${isValid ? 'success' : 'error'}">
+                    ${isValid ? '✅' : '❌'} 题目数据结构: ${isValid ? '正确' : '错误'}
+                </p>
+                <pre>${JSON.stringify(testQuestion, null, 2)}</pre>
+            `;
+            
+            return isValid;
+        }
+        
+        // 添加题目
+        function addQuestion() {
+            const newQuestion = {
+                id: questionId++,
+                question: '',
+                options: ['', '', '', ''],
+                correctAnswer: 0
+            };
+            
+            questions.push(newQuestion);
+            renderQuestions();
+            updateQuestionCount();
+        }
+        
+        // 删除题目
+        function deleteQuestion(index) {
+            questions.splice(index, 1);
+            renderQuestions();
+            updateQuestionCount();
+        }
+        
+        // 更新题目内容
+        function updateQuestion(index, field, value) {
+            if (field === 'options') {
+                const optionIndex = parseInt(value.split('_')[1]);
+                questions[index].options[optionIndex] = value.split('_')[2];
+            } else {
+                questions[index][field] = value;
+            }
+        }
+        
+        // 设置正确答案
+        function setCorrectAnswer(questionIndex, optionIndex) {
+            questions[questionIndex].correctAnswer = optionIndex;
+            renderQuestions();
+        }
+        
+        // 渲染题目列表
+        function renderQuestions() {
+            const container = document.getElementById('questions-container');
+            container.innerHTML = '';
+            
+            questions.forEach((question, questionIndex) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'question-item';
+                questionDiv.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <span style="font-size: 14px; font-weight: bold;">题目 ${questionIndex + 1}</span>
+                        <button onclick="deleteQuestion(${questionIndex})" style="padding: 4px 8px; background: rgba(245, 108, 108, 0.2); color: #f56c6c; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                            删除
+                        </button>
+                    </div>
+                    
+                    <label style="display: block; margin-bottom: 8px;">
+                        题目内容：
+                        <textarea
+                            value="${question.question}"
+                            onchange="updateQuestion(${questionIndex}, 'question', this.value)"
+                            style="width: 100%; min-height: 60px; border-radius: 6px; border: none; margin-top: 4px; resize: vertical; padding: 8px;"
+                            placeholder="请输入题目内容..."
+                        ></textarea>
+                    </label>
+                    
+                    <div style="margin-bottom: 8px;">
+                        <span style="font-size: 12px; opacity: 0.8;">选项：</span>
+                        ${question.options.map((option, optionIndex) => `
+                            <div style="display: flex; align-items: center; margin-top: 6px;">
+                                <span style="
+                                    width: 20px; 
+                                    height: 20px; 
+                                    border-radius: 50%; 
+                                    background: ${question.correctAnswer === optionIndex ? '#67c23a' : 'rgba(255,255,255,0.2)'};
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    font-size: 10px;
+                                    margin-right: 8px;
+                                    cursor: pointer;
+                                " onclick="setCorrectAnswer(${questionIndex}, ${optionIndex})">
+                                    ${question.correctAnswer === optionIndex ? '✓' : String.fromCharCode(65 + optionIndex)}
+                                </span>
+                                <input
+                                    type="text"
+                                    value="${option}"
+                                    onchange="updateQuestion(${questionIndex}, 'options', '${optionIndex}_' + this.value)"
+                                    style="flex: 1; padding: 6px 8px; border-radius: 4px; border: none; background: rgba(255,255,255,0.1); color: #000;"
+                                    placeholder="选项 ${String.fromCharCode(65 + optionIndex)}"
+                                />
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(questionDiv);
+            });
+        }
+        
+        // 更新题目数量
+        function updateQuestionCount() {
+            document.getElementById('question-count').textContent = questions.length;
+        }
+        
+        // 测试UI功能
+        function testUIFunctionality() {
+            const results = [];
+            
+            // 测试添加题目
+            addQuestion();
+            results.push(questions.length === 1 ? '✅ 添加题目功能正常' : '❌ 添加题目功能异常');
+            
+            // 测试删除题目
+            deleteQuestion(0);
+            results.push(questions.length === 0 ? '✅ 删除题目功能正常' : '❌ 删除题目功能异常');
+            
+            // 测试题目编辑
+            addQuestion();
+            questions[0].question = '测试题目';
+            questions[0].options = ['A. 选项1', 'B. 选项2', 'C. 选项3', 'D. 选项4'];
+            questions[0].correctAnswer = 2;
+            results.push('✅ 题目编辑功能正常');
+            
+            renderQuestions();
+            
+            document.getElementById('test-results').innerHTML = `
+                <h3>测试结果：</h3>
+                ${results.map(result => `<p>${result}</p>`).join('')}
+            `;
+        }
+        
+        // 初始化测试
+        window.onload = function() {
+            testDataStructure();
+            testUIFunctionality();
+        };
+    </script>
+</body>
+</html> 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 interface DashboardProps {
@@ -23,6 +23,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     navigate('/');
   };
 
+  // 调试信息：检查用户角色
+  console.log('Dashboard - 当前用户信息:', user);
+  console.log('Dashboard - 用户角色:', user?.role);
+
+  // 维护人员自动跳转到维护管理页面
+  useEffect(() => {
+    if (user?.role === 'maintenance') {
+      console.log('维护人员自动跳转到维护管理页面');
+      navigate('/maintenance-admin');
+    }
+  }, [user, navigate]);
+
   return (
     <div style={{ 
       position: 'relative', 
@@ -46,7 +58,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       }}>
         <div style={{ textAlign: 'center' }}>
           <h2 style={{ margin: 0, fontSize: '24px' }}>欢迎，{user?.name}</h2>
-          <p style={{ margin: '5px 0 0 0', opacity: 0.8 }}>角色：{user?.role === 'admin' ? '管理员' : '职工'}</p>
+                          <p style={{ margin: '5px 0 0 0', opacity: 0.8 }}>角色：{
+                  user?.role === 'admin' ? '系统管理员' : 
+                  user?.role === 'maintenance' ? '维护人员' : 
+                  '普通用户'
+                }</p>
         </div>
         <div style={{ 
           display: 'flex', 
@@ -54,21 +70,24 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           flexWrap: 'wrap',
           justifyContent: 'center'
         }}>
-          <button
-            onClick={() => navigate('/articles')}
-            style={{
-              padding: '10px 20px',
-              background: 'linear-gradient(90deg,#409eff 60%,#2b8cff 100%)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              minWidth: '120px'
-            }}
-          >
-            学习中心
-          </button>
+          {user?.role === 'user' && (
+            <button
+              onClick={() => navigate('/articles')}
+              style={{
+                padding: '10px 20px',
+                background: 'linear-gradient(90deg,#409eff 60%,#2b8cff 100%)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                minWidth: '120px'
+              }}
+            >
+              学习中心
+            </button>
+          )}
+                      {/* 管理员按钮 */}
           {user?.role === 'admin' && (
             <button
               onClick={() => navigate('/admin')}
@@ -83,7 +102,26 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 minWidth: '120px'
               }}
             >
-              管理后台
+              管理后台 (admin)
+            </button>
+          )}
+
+          {/* 维护人员按钮 */}
+          {user?.role === 'maintenance' && (
+            <button
+              onClick={() => navigate('/maintenance-admin')}
+              style={{
+                padding: '10px 20px',
+                background: 'linear-gradient(90deg,#e6a23c 60%,#cf9236 100%)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                minWidth: '120px'
+              }}
+            >
+              后台维护 (maintenance)
             </button>
           )}
           <button

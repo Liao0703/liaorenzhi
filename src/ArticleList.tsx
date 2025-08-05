@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAllArticles } from './articleData';
-import type { ArticleData } from './articleData';
+import { CloudArticleService } from './cloudDataService';
+
 
 interface ArticleListProps {
   user: any;
@@ -42,15 +43,46 @@ const ArticleList: React.FC<ArticleListProps> = ({ user: _user }) => {
       setArticles(articlesWithStatus);
     };
 
+    // 初始加载
     loadArticles();
+    
+    // 从云端同步数据
+    const syncFromCloud = async () => {
+      try {
+        console.log('开始从云端同步文章数据...');
+        const result = await CloudArticleService.forceSync();
+        if (result.success) {
+          console.log('云端同步成功，重新加载文章数据');
+          // 重新加载文章数据
+          loadArticles();
+        } else {
+          console.error('云端同步失败:', result.message);
+        }
+      } catch (error) {
+        console.error('云端同步失败:', error);
+      }
+    };
+    
+    // 页面加载时同步一次
+    syncFromCloud();
+    
     // 监听localStorage变化
     const handleStorageChange = () => {
+      console.log('检测到localStorage变化，重新加载文章数据');
       loadArticles();
     };
     window.addEventListener('storage', handleStorageChange);
     
+    // 监听自定义事件，用于手动触发数据重新加载
+    const handleDataReload = () => {
+      console.log('收到数据重新加载事件');
+      loadArticles();
+    };
+    window.addEventListener('dataReload', handleDataReload);
+    
     return () => {
       window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('dataReload', handleDataReload);
     };
   }, []);
 

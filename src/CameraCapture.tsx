@@ -4,9 +4,17 @@ interface CameraCaptureProps {
   isActive: boolean;
   onPhotoTaken: (photoData: string) => void;
   interval: number; // 拍照间隔（秒）
+  enableFaceRecognition?: boolean; // 是否启用人脸识别
+  onFaceRecognitionResult?: (result: any) => void; // 人脸识别结果回调
 }
 
-const CameraCapture: React.FC<CameraCaptureProps> = ({ isActive, onPhotoTaken, interval }) => {
+const CameraCapture: React.FC<CameraCaptureProps> = ({ 
+  isActive, 
+  onPhotoTaken, 
+  interval
+  // enableFaceRecognition = false,
+  // onFaceRecognitionResult 
+}) => {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string>('');
   const [isCameraReady, setIsCameraReady] = useState(false);
@@ -19,10 +27,22 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ isActive, onPhotoTaken, i
     try {
       console.log('正在启动摄像头...');
       
-      // 首先尝试获取可用的摄像头设备
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      // 检查浏览器是否支持媒体设备API
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('浏览器不支持摄像头功能');
+      }
       
+      // 安全地获取摄像头设备列表
+      let devices: MediaDeviceInfo[] = [];
+      try {
+        if (navigator.mediaDevices.enumerateDevices) {
+          devices = await navigator.mediaDevices.enumerateDevices();
+        }
+      } catch (err) {
+        console.warn('无法枚举设备，尝试直接获取摄像头:', err);
+      }
+      
+      const videoDevices = devices.filter(device => device.kind === 'videoinput');
       console.log('可用的摄像头设备:', videoDevices.map(d => ({ id: d.deviceId, label: d.label })));
       
       const mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -148,7 +168,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ isActive, onPhotoTaken, i
         const r = imageData.data[i];
         const g = imageData.data[i + 1];
         const b = imageData.data[i + 2];
-        const a = imageData.data[i + 3];
+        // const a = imageData.data[i + 3]; // 透明度，暂时不需要
         
         if (r > 10 || g > 10 || b > 10) { // 不是纯黑色
           nonZeroPixels++;

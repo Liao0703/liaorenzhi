@@ -1,4 +1,7 @@
-// 阿里云OSS配置
+// 阿里云OSS配置 - 已禁用，改用云服务器存储
+
+console.warn('⚠️ OSS存储已被禁用，所有文件现在统一上传到云服务器');
+
 export interface OSSConfig {
   region: string;
   accessKeyId: string;
@@ -7,48 +10,41 @@ export interface OSSConfig {
   endpoint: string;
 }
 
-// 默认OSS配置（需要用户填写）
+// OSS配置已禁用
 export const defaultOSSConfig: OSSConfig = {
-  region: 'oss-cn-chengdu', // 根据您的Bucket地域
-  accessKeyId: '', // 您的AccessKey ID
-  accessKeySecret: '', // 您的AccessKey Secret
-  bucket: '', // 您的Bucket名称
-  endpoint: 'https://oss-cn-chengdu.aliyuncs.com' // 根据您的Bucket地域
+  region: 'DISABLED', 
+  accessKeyId: 'DISABLED', 
+  accessKeySecret: 'DISABLED', 
+  bucket: 'DISABLED', 
+  endpoint: 'DISABLED'
 };
 
-// 从localStorage加载OSS配置
+// OSS配置加载 - 已禁用
 export const loadOSSConfig = (): OSSConfig => {
-  try {
-    const stored = localStorage.getItem('learning_oss_config');
-    if (stored) {
-      const config = JSON.parse(stored);
-      return { ...defaultOSSConfig, ...config };
-    }
-  } catch (error) {
-    console.error('加载OSS配置失败:', error);
-  }
+  console.warn('OSS存储已禁用，请使用云服务器存储');
   return defaultOSSConfig;
 };
 
-// 保存OSS配置到localStorage
-export const saveOSSConfig = (config: OSSConfig) => {
-  try {
-    localStorage.setItem('learning_oss_config', JSON.stringify(config));
-  } catch (error) {
-    console.error('保存OSS配置失败:', error);
-  }
+// OSS配置保存 - 已禁用
+export const saveOSSConfig = (_config: Partial<OSSConfig>): void => {
+  console.warn('OSS存储已禁用，配置保存被忽略');
 };
 
-// 验证OSS配置是否完整
-export const validateOSSConfig = (config: OSSConfig): boolean => {
-  return !!(config.region && config.accessKeyId && config.accessKeySecret && config.bucket && config.endpoint);
+// OSS配置验证 - 已禁用
+export const validateOSSConfig = (_config: OSSConfig): boolean => {
+  console.warn('OSS存储已禁用，验证总是返回false');
+  return false;
 };
 
-// 获取OSS配置状态
-export const getOSSConfigStatus = () => {
-  const config = loadOSSConfig();
+// OSS配置状态
+export const getOSSConfigStatus = (): { 
+  isConfigured: boolean; 
+  isEnabled: boolean; 
+  message: string;
+} => {
   return {
-    isConfigured: validateOSSConfig(config),
-    config
+    isConfigured: false,
+    isEnabled: false,
+    message: 'OSS存储已禁用，现在使用云服务器存储'
   };
 }; 

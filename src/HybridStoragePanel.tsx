@@ -1,14 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { HybridStorageService, StorageFile } from './hybridStorageService';
+import { getServerFileList, deleteServerFile, STORAGE_CONFIG } from './fileUploadService';
 
-interface HybridStoragePanelProps {
+interface ServerStoragePanelProps {
   onClose: () => void;
 }
 
-const HybridStoragePanel: React.FC<HybridStoragePanelProps> = ({ onClose }) => {
-  const [files, setFiles] = useState<StorageFile[]>([]);
-  const [stats, setStats] = useState(HybridStorageService.getStats());
+interface ServerFile {
+  filename: string;
+  originalName: string;
+  size: number;
+  uploadTime: string;
+  downloadUrl: string;
+  previewUrl: string;
+}
+
+const ServerStoragePanel: React.FC<ServerStoragePanelProps> = ({ onClose }) => {
+  const [files, setFiles] = useState<ServerFile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [totalSize, setTotalSize] = useState(0);
 
   // 格式化字节数
   const formatBytes = (bytes: number): string => {
@@ -20,46 +29,78 @@ const HybridStoragePanel: React.FC<HybridStoragePanelProps> = ({ onClose }) => {
   };
 
   // 加载文件列表
-  const loadFiles = () => {
-    const fileList = HybridStorageService.getFiles();
-    setFiles(fileList);
-    setStats(HybridStorageService.getStats());
+  const loadFiles = async () => {
+    try {
+      setIsLoading(true);
+      const fileList = await getServerFileList();
+      setFiles(fileList);
+      
+      // 计算总大小
+      const total = fileList.reduce((sum, file) => sum + file.size, 0);
+      setTotalSize(total);
+    } catch (error) {
+      console.error('加载文件列表失败:', error);
+      setFiles([]);
+      setTotalSize(0);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
     loadFiles();
   }, []);
 
-  // 同步到OSS
-  const handleSyncToOSS = async () => {
-    setIsLoading(true);
-    try {
-      const result = await HybridStorageService.syncAllToOSS();
-      alert(`同步完成！成功: ${result.success} 个文件，失败: ${result.failed} 个文件`);
-      loadFiles();
-    } catch (error) {
-      alert(`同步失败: ${error instanceof Error ? error.message : '未知错误'}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // 清理缓存
-  const handleCleanupCache = () => {
-    try {
-      const result = HybridStorageService.cleanupCache();
-      alert(`清理完成！删除: ${result.removed} 个文件，释放: ${formatBytes(result.freedSize)}`);
-      loadFiles();
-    } catch (error) {
-      alert(`清理失败: ${error instanceof Error ? error.message : '未知错误'}`);
-    }
+  // 刷新文件列表
+  const handleRefresh = async () => {
+    await loadFiles();
   };
 
   // 删除文件
-  const handleDeleteFile = (fileId: string) => {
-    if (window.confirm('确定要删除这个文件吗？')) {
-      HybridStorageService.deleteFile(fileId);
-      loadFiles();
+  const handleDeleteFile = async (filename: string) => {
+    if (!confirm('确定要删除这个文件吗？此操作不可撤销。')) {
+      return;
+    }
+
+    try {
+      const success = await deleteServerFile(filename);
+      if (success) {
+        alert('文件删除成功');
+        await loadFiles();
+      } else {
+        alert('文件删除失败');
+      }
+    } catch (error) {
+      alert(`删除失败: ${error instanceof Error ? error.message : '未知错误'}`);
+    }
+  };
+
+  // 导出文件列表
+  const handleExportList = () => {
+    try {
+      const exportData = {
+        files: files,
+        totalFiles: files.length,
+        totalSize: totalSize,
+        exportTime: new Date().toISOString(),
+        storageConfig: STORAGE_CONFIG
+      };
+      
+      const dataStr = JSON.stringify(exportData, null, 2);
+      const dataBlob = new Blob([dataStr], {type: 'application/json'});
+      const url = URL.createObjectURL(dataBlob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `server-files-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      alert('文件列表导出成功');
+    } catch (error) {
+      alert(`导出失败: ${error instanceof Error ? error.message : '未知错误'}`);
     }
   };
 
@@ -68,51 +109,55 @@ const HybridStoragePanel: React.FC<HybridStoragePanelProps> = ({ onClose }) => {
       position: 'fixed',
       top: 0,
       left: 0,
-      width: '100vw',
-      height: '100vh',
+      right: 0,
+      bottom: 0,
       background: 'rgba(0,0,0,0.8)',
-      zIndex: 10000,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '20px'
+      zIndex: 1000
     }}>
       <div style={{
-        background: '#222',
-        padding: '30px',
-        borderRadius: '16px',
-        maxWidth: 800,
-        width: '100%',
+        background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)',
+        borderRadius: '12px',
+        padding: '20px',
+        color: '#fff',
+        width: '90%',
+        maxWidth: '800px',
         maxHeight: '90vh',
-        overflowY: 'auto',
-        color: '#fff'
+        overflowY: 'auto'
       }}>
-        <h2 style={{ margin: '0 0 20px 0', textAlign: 'center' }}>💾 混合存储管理</h2>
+        <h2 style={{ margin: '0 0 20px 0', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          🗄️ 云服务器存储管理
+          <span style={{ fontSize: '12px', opacity: 0.8, fontWeight: 'normal' }}>
+            统一文件存储平台
+          </span>
+        </h2>
         
         {/* 存储统计 */}
         <div style={{
           background: 'rgba(255,255,255,0.1)',
-          padding: '20px',
           borderRadius: '8px',
+          padding: '15px',
           marginBottom: '20px'
         }}>
           <h3 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>📊 存储统计</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px' }}>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#409eff' }}>{stats.localFiles}</div>
-              <div style={{ fontSize: '12px', opacity: 0.8 }}>本地文件</div>
+              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#10b981' }}>{files.length}</div>
+              <div style={{ fontSize: '12px', opacity: 0.8 }}>文件总数</div>
             </div>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#67c23a' }}>{stats.ossFiles}</div>
-              <div style={{ fontSize: '12px', opacity: 0.8 }}>OSS文件</div>
+              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#f59e0b' }}>{formatBytes(totalSize)}</div>
+              <div style={{ fontSize: '12px', opacity: 0.8 }}>总存储大小</div>
             </div>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#e6a23c' }}>{formatBytes(stats.localSize)}</div>
-              <div style={{ fontSize: '12px', opacity: 0.8 }}>本地大小</div>
+              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#8b5cf6' }}>50MB</div>
+              <div style={{ fontSize: '12px', opacity: 0.8 }}>单文件限制</div>
             </div>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#f56c6c' }}>{formatBytes(stats.ossSize)}</div>
-              <div style={{ fontSize: '12px', opacity: 0.8 }}>OSS大小</div>
+              <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#10b981' }}>✅</div>
+              <div style={{ fontSize: '12px', opacity: 0.8 }}>服务状态</div>
             </div>
           </div>
         </div>
@@ -120,13 +165,13 @@ const HybridStoragePanel: React.FC<HybridStoragePanelProps> = ({ onClose }) => {
         {/* 操作按钮 */}
         <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
           <button
-            onClick={handleSyncToOSS}
+            onClick={handleRefresh}
             disabled={isLoading}
             style={{
               padding: '10px 20px',
               background: isLoading 
                 ? 'rgba(255,255,255,0.2)' 
-                : 'linear-gradient(90deg,#67c23a 60%,#5daf34 100%)',
+                : 'linear-gradient(90deg,#10b981 60%,#059669 100%)',
               color: '#fff',
               border: 'none',
               borderRadius: '6px',
@@ -134,14 +179,14 @@ const HybridStoragePanel: React.FC<HybridStoragePanelProps> = ({ onClose }) => {
               fontSize: '14px'
             }}
           >
-            {isLoading ? '同步中...' : '🔄 同步到OSS'}
+            {isLoading ? '刷新中...' : '🔄 刷新列表'}
           </button>
           
           <button
-            onClick={handleCleanupCache}
+            onClick={handleExportList}
             style={{
               padding: '10px 20px',
-              background: 'linear-gradient(90deg,#e6a23c 60%,#f3d19e 100%)',
+              background: 'linear-gradient(90deg,#f59e0b 60%,#d97706 100%)',
               color: '#fff',
               border: 'none',
               borderRadius: '6px',
@@ -149,7 +194,7 @@ const HybridStoragePanel: React.FC<HybridStoragePanelProps> = ({ onClose }) => {
               fontSize: '14px'
             }}
           >
-            🗑️ 清理缓存
+            📦 导出列表
           </button>
           
           <button
@@ -179,18 +224,22 @@ const HybridStoragePanel: React.FC<HybridStoragePanelProps> = ({ onClose }) => {
             background: 'rgba(255,255,255,0.1)',
             borderBottom: '1px solid rgba(255,255,255,0.1)'
           }}>
-            <h3 style={{ margin: 0, fontSize: '16px' }}>📁 文件列表</h3>
+            <h3 style={{ margin: 0, fontSize: '16px' }}>📁 云服务器文件列表</h3>
           </div>
           
-          {files.length === 0 ? (
+          {isLoading ? (
             <div style={{ padding: '40px', textAlign: 'center', opacity: 0.6 }}>
-              暂无文件
+              正在加载文件列表...
+            </div>
+          ) : files.length === 0 ? (
+            <div style={{ padding: '40px', textAlign: 'center', opacity: 0.6 }}>
+              暂无文件，上传文件后将显示在这里
             </div>
           ) : (
             <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-              {files.map(file => (
+              {files.map((file, index) => (
                 <div
-                  key={file.id}
+                  key={`${file.filename}-${index}`}
                   style={{
                     padding: '15px',
                     borderBottom: '1px solid rgba(255,255,255,0.1)',
@@ -200,9 +249,9 @@ const HybridStoragePanel: React.FC<HybridStoragePanelProps> = ({ onClose }) => {
                   }}
                 >
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>{file.name}</div>
+                    <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>{file.originalName || file.filename}</div>
                     <div style={{ fontSize: '12px', opacity: 0.8 }}>
-                      {formatBytes(file.size)} • {file.type} • 访问 {file.accessCount} 次
+                      {formatBytes(file.size)} • {file.filename}
                     </div>
                     <div style={{ fontSize: '12px', opacity: 0.6 }}>
                       上传: {new Date(file.uploadTime).toLocaleString()}
@@ -210,34 +259,52 @@ const HybridStoragePanel: React.FC<HybridStoragePanelProps> = ({ onClose }) => {
                   </div>
                   
                   <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
-                    {file.localUrl && (
                       <span style={{
                         padding: '2px 6px',
-                        background: 'rgba(64, 158, 255, 0.2)',
-                        color: '#409eff',
+                      background: 'rgba(16, 185, 129, 0.2)',
+                      color: '#10b981',
                         borderRadius: '4px',
                         fontSize: '10px'
                       }}>
-                        本地
+                      云服务器
                       </span>
-                    )}
-                    {file.ossUrl && (
-                      <span style={{
-                        padding: '2px 6px',
-                        background: 'rgba(103, 194, 58, 0.2)',
-                        color: '#67c23a',
-                        borderRadius: '4px',
-                        fontSize: '10px'
-                      }}>
-                        OSS
-                      </span>
-                    )}
-                    <button
-                      onClick={() => handleDeleteFile(file.id)}
+                    <a
+                      href={file.previewUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       style={{
                         padding: '4px 8px',
-                        background: 'rgba(245, 108, 108, 0.2)',
-                        color: '#f56c6c',
+                        background: 'rgba(59, 130, 246, 0.2)',
+                        color: '#3b82f6',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        textDecoration: 'none'
+                      }}
+                    >
+                      预览
+                    </a>
+                    <a
+                      href={file.downloadUrl}
+                      download
+                      style={{
+                        padding: '4px 8px',
+                        background: 'rgba(16, 185, 129, 0.2)',
+                        color: '#10b981',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        textDecoration: 'none'
+                      }}
+                    >
+                      下载
+                    </a>
+                    <button
+                      onClick={() => handleDeleteFile(file.filename)}
+                      style={{
+                        padding: '4px 8px',
+                        background: 'rgba(239, 68, 68, 0.2)',
+                        color: '#ef4444',
                         border: 'none',
                         borderRadius: '4px',
                         cursor: 'pointer',
@@ -254,12 +321,13 @@ const HybridStoragePanel: React.FC<HybridStoragePanelProps> = ({ onClose }) => {
         </div>
 
         <div style={{ marginTop: '20px', fontSize: '12px', opacity: 0.6 }}>
-          <p><strong>说明：</strong></p>
+          <p><strong>云服务器存储说明：</strong></p>
           <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
-            <li>本地文件：存储在浏览器本地，访问速度快</li>
-            <li>OSS文件：存储在阿里云OSS，支持云端访问</li>
-            <li>混合存储：同时保存在本地和OSS，提供最佳体验</li>
-            <li>清理缓存：删除7天未访问的本地文件（已同步到OSS）</li>
+            <li>所有文件统一存储在云服务器，无需配置OSS或本地存储</li>
+            <li>支持PDF、Word、图片、文本等多种文件格式</li>
+            <li>单个文件最大支持50MB，存储稳定可靠</li>
+            <li>文件自动备份，支持预览和下载功能</li>
+            <li>可导出文件列表进行数据管理</li>
           </ul>
         </div>
       </div>
@@ -267,4 +335,4 @@ const HybridStoragePanel: React.FC<HybridStoragePanelProps> = ({ onClose }) => {
   );
 };
 
-export default HybridStoragePanel; 
+export default ServerStoragePanel; 

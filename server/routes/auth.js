@@ -23,21 +23,31 @@ router.post('/login', [
 
     const { username, password } = req.body;
 
+    console.log('登录尝试:', { username, password: password ? '***' : 'undefined' });
+
     // 查询用户
     const [users] = await pool.execute(
       'SELECT * FROM users WHERE username = ?',
       [username]
     );
 
+    console.log('查询结果:', users.length, '个用户');
+
     if (users.length === 0) {
+      console.log('用户不存在:', username);
       return res.status(401).json({ error: '用户名或密码错误' });
     }
 
     const user = users[0];
+    console.log('找到用户:', { id: user.id, username: user.username, role: user.role });
+    console.log('存储的密码哈希:', user.password);
 
     // 验证密码
     const isValidPassword = await bcrypt.compare(password, user.password);
+    console.log('密码验证结果:', isValidPassword);
+    
     if (!isValidPassword) {
+      console.log('密码验证失败');
       return res.status(401).json({ error: '用户名或密码错误' });
     }
 

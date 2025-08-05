@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { HybridStorageService } from './hybridStorageService';
-import type { StorageFile } from './hybridStorageService';
-import { isFileTypeSupported, getFileType, formatFileSize } from './fileUploadService';
+// import type { StorageFile } from './hybridStorageService';
+import { isFileTypeSupported, getFileType } from './fileUploadService';
 import type { FileUploadResult } from './fileUploadService';
 
 export interface FileInfo {
@@ -84,21 +84,21 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({ show, onClose, onFile
       setUploadProgress(100);
       setUploadResult({
         success: true,
-        fileUrl: storageFile.localUrl || storageFile.ossUrl || '',
-        fileName: storageFile.name
+        fileUrl: storageFile.fileUrl || '',
+        fileName: storageFile.fileName || file.name
       });
 
-      if (storageFile) {
+      if (storageFile.success) {
         // 上传成功，返回文件信息
         const fileInfo: FileInfo = {
           name: file.name,
           size: file.size,
           type: file.type,
-          fileUrl: storageFile.localUrl || storageFile.ossUrl || '',
+          fileUrl: storageFile.fileUrl || '',
           fileType: getFileType(file.type),
-          fileName: storageFile.name,
-          fileId: storageFile.id,
-          storageType: storageFile.ossUrl ? 'hybrid' : 'local'
+          fileName: storageFile.fileName || file.name,
+          fileId: storageFile.fileId || Date.now().toString(),
+          storageType: 'hybrid'
         };
         
         onFileUploaded(fileInfo);

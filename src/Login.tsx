@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { authAPI } from './config/api';
 
 interface LoginProps {
   onLoginSuccess: (user: any) => void;
@@ -9,24 +10,21 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
-    // 模拟用户数据
-    const users = {
-      'admin': { id: 1, username: 'admin', name: '管理员', role: 'admin' },
-      'user1': { id: 2, username: 'user1', name: '张三', role: 'user' },
-      'user2': { id: 3, username: 'user2', name: '李四', role: 'user' },
-      'user3': { id: 4, username: 'user3', name: '王五', role: 'user' }
-    };
-    
-    if (users[username as keyof typeof users] && password === '123456') {
-      console.log('登录验证成功');
-      onLoginSuccess(users[username as keyof typeof users]);
-    } else {
-      setError('用户名或密码错误');
-      console.log('登录验证失败');
+
+    try {
+      const data = await authAPI.login(username, password);
+
+      // 保存token到localStorage
+      if (data.token) {
+        localStorage.setItem('auth_token', data.token);
+      }
+      onLoginSuccess(data.user);
+    } catch (error: any) {
+      console.error('登录请求错误:', error);
+      setError(error.message || '网络错误，请重试');
     }
   };
 
@@ -38,6 +36,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         placeholder="用户名"
         value={username}
         onChange={e => setUsername(e.target.value)}
+        autoComplete="username"
         style={{
           width: '100%',
           marginBottom: 16,
@@ -54,6 +53,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         placeholder="密码"
         value={password}
         onChange={e => setPassword(e.target.value)}
+        autoComplete="current-password"
         style={{
           width: '100%',
           marginBottom: 18,
@@ -66,9 +66,9 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         }}
       />
       {error && (
-        <div style={{ 
-          color: '#ff6b6b', 
-          marginBottom: 16, 
+        <div style={{
+          color: '#ff6b6b',
+          marginBottom: 16,
           textAlign: 'center',
           fontSize: 14
         }}>
@@ -92,13 +92,15 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       >
         登录
       </button>
-      <div style={{ 
-        color: '#fff8', 
-        fontSize: 12, 
-        textAlign: 'center',
-        marginTop: 8
-      }}>
-        测试账号：admin/123456 (管理员) | user1/123456 (职工)
+      <div style={{ color: '#fff8', fontSize: 12, textAlign: 'center', marginTop: 8 }}>
+        <div style={{ fontSize: 10, opacity: 0.7, marginTop: 8, padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <div style={{ marginBottom: 4, fontWeight: 'bold', color: '#ff9800' }}>🔑 测试账号（统一密码）</div>
+          <div style={{ marginBottom: 2, color: '#f44336' }}>👑 <strong>系统管理员</strong>: admin / 123456</div>
+          <div style={{ marginBottom: 2, color: '#2196f3' }}>🔧 <strong>维护人员</strong>: maintenance / 123456</div>
+          <div style={{ marginBottom: 2, color: '#4caf50' }}>👤 <strong>普通用户</strong>: user / 123456</div>
+          <div style={{ color: '#9c27b0' }}>👑 <strong>测试管理员</strong>: testadmin / 123456</div>
+          <div style={{ marginTop: 6, fontSize: 9, opacity: 0.6, fontStyle: 'italic' }}>所有账号密码已统一为 123456，不同角色拥有不同的系统权限</div>
+        </div>
       </div>
     </form>
   );

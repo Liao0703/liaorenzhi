@@ -1,6 +1,4 @@
 // 文章数据存储 - 模拟数据库
-import dataSyncService from './dataSyncService';
-
 export interface ArticleData {
   id: string;
   title: string;
@@ -39,8 +37,6 @@ const loadArticlesFromStorage = (): ArticleData[] => {
 const saveArticlesToStorage = (articles: ArticleData[]) => {
   try {
     localStorage.setItem('learning_articles', JSON.stringify(articles));
-    // 标记数据变化，触发同步
-    dataSyncService.markChanged('articles');
   } catch (error) {
     console.error('保存文章数据失败:', error);
   }
@@ -102,67 +98,45 @@ if (articlesData.length === 0) {
 
 第十四条 信号显示异常时，应当立即停止相关作业。
 
-## 第四章 安全措施
+## 第四章 应急处理
 
-### 第一节 防护措施
+### 第一节 事故处理
 
-第十五条 作业人员应当穿戴符合要求的劳动防护用品。
+第十五条 发生事故时，应当立即启动应急预案。
 
-第十六条 作业现场应当设置必要的安全警示标志。
+第十六条 事故现场应当设置警示标志，防止次生事故。
 
-第十七条 作业前应当进行安全技术交底。
+第十七条 事故调查应当按照规定程序进行，查明原因并制定防范措施。
 
-### 第二节 应急处理
+### 第二节 应急救援
 
-第十八条 发生事故时，应当立即启动应急预案。
+第十八条 应急救援队伍应当定期进行培训和演练。
 
-第十九条 事故现场应当采取有效措施防止次生灾害。
+第十九条 应急救援设备应当保持完好状态，确保随时可用。
 
-第二十条 事故调查应当按照规定程序进行。
+第二十条 应急救援行动应当统一指挥，协调配合。
 
 ## 第五章 监督检查
 
-### 第一节 检查制度
+第二十一条 铁路运输企业应当建立安全监督检查制度。
 
-第二十一条 建立定期检查制度，确保安全措施落实到位。
-
-第二十二条 检查人员应当具备相应的专业知识和技能。
-
-第二十三条 检查结果应当及时记录并整改。
-
-### 第二节 责任追究
-
-第二十四条 违反本规程的行为，应当依法追究责任。
-
-第二十五条 造成事故的，应当依法承担相应责任。
-
-第二十六条 构成犯罪的，依法追究刑事责任。
-
-## 第六章 附则
-
-第二十七条 本规程由铁路安全管理部门负责解释。
-
-第二十八条 本规程自发布之日起施行。
-
-第二十九条 各铁路局可根据实际情况制定实施细则。
-
-第三十条 本规程的修改和废止，按照有关规定执行。
+第二十二条 监督检查人员应当具备相应的专业知识和技能。
 `,
     questions: [
       {
         id: 1,
-        question: '铁路从业人员上岗前需要什么条件？',
+        question: '铁路从业人员上岗前需要具备什么条件？',
         options: [
-          'A. 具备相应的安全知识和操作技能',
-          'B. 经过安全培训并考核合格',
-          'C. 以上都是',
+          'A. 具备相应的安全知识和操作技能，经过安全培训并考核合格',
+          'B. 只需要有工作经验即可',
+          'C. 只需要身体健康即可',
           'D. 不需要任何条件'
         ],
-        correctAnswer: 2
+        correctAnswer: 0
       },
       {
         id: 2,
-        question: '列车运行前应当做什么检查？',
+        question: '列车运行前应当对哪些设备进行检查？',
         options: [
           'A. 只检查车辆',
           'B. 只检查信号',
@@ -225,8 +199,6 @@ if (articlesData.length === 0) {
     ]
   }
 ];
-  // 保存初始数据
-  saveArticlesToStorage(articlesData);
 }
 
 // 获取文章数据
@@ -234,44 +206,127 @@ export const getArticleById = (id: string): ArticleData | undefined => {
   return articlesData.find(article => article.id === id);
 };
 
-// 更新文章数据
-export const updateArticle = (updatedArticle: ArticleData) => {
+// 更新文章数据（支持云端同步）
+export const updateArticle = async (updatedArticle: ArticleData, syncToCloud: boolean = true) => {
   const index = articlesData.findIndex(article => article.id === updatedArticle.id);
   if (index !== -1) {
     articlesData[index] = updatedArticle;
     saveArticlesToStorage(articlesData);
+    
+    // 同步到云端
+    if (syncToCloud) {
+      try {
+        const { CloudArticleService } = await import('./cloudDataService');
+        await CloudArticleService.updateArticle(updatedArticle);
+        console.log('✅ 文章已同步到云端:', updatedArticle.title);
+      } catch (error) {
+        console.warn('⚠️ 云端同步失败，仅保存到本地:', error);
+      }
+    }
   }
 };
 
-// 添加新文章
-export const addArticle = (article: Omit<ArticleData, 'id'>) => {
-  const newArticle = {
+// 添加新文章（支持云端同步）
+export const addArticle = async (article: Omit<ArticleData, 'id'>, syncToCloud: boolean = true) => {
+  let newArticle: ArticleData;
+  
+  if (syncToCloud) {
+    try {
+      // 优先添加到云端，获取服务器生成的ID
+      const { CloudArticleService } = await import('./cloudDataService');
+      newArticle = await CloudArticleService.addArticle(article);
+      console.log('✅ 文章已添加到云端:', newArticle.title);
+    } catch (error) {
+      console.warn('⚠️ 云端添加失败，仅保存到本地:', error);
+      // 云端失败时使用本地生成ID
+      newArticle = {
+        ...article,
+        id: (Math.max(...articlesData.map(a => parseInt(a.id) || 0)) + 1).toString()
+      };
+    }
+  } else {
+    // 仅本地添加
+    newArticle = {
     ...article,
-    id: (Math.max(...articlesData.map(a => parseInt(a.id))) + 1).toString()
+      id: (Math.max(...articlesData.map(a => parseInt(a.id) || 0)) + 1).toString()
   };
+  }
+  
+  // 更新本地数据
   articlesData.push(newArticle);
   saveArticlesToStorage(articlesData);
   return newArticle;
 };
 
-// 删除文章
-export const deleteArticle = (id: string) => {
+// 删除文章（支持云端同步）
+export const deleteArticle = async (id: string, syncToCloud: boolean = true) => {
   const index = articlesData.findIndex(article => article.id === id);
   if (index !== -1) {
+    const articleTitle = articlesData[index].title;
     articlesData.splice(index, 1);
     saveArticlesToStorage(articlesData);
+    
+    // 同步到云端
+    if (syncToCloud) {
+      try {
+        const { CloudArticleService } = await import('./cloudDataService');
+        await CloudArticleService.deleteArticle(id);
+        console.log('✅ 文章已从云端删除:', articleTitle);
+      } catch (error) {
+        console.warn('⚠️ 云端删除失败，仅从本地删除:', error);
+      }
+    }
+  }
+};
+
+// 从云端同步文章数据
+export const syncFromCloud = async (): Promise<{
+  success: boolean;
+  count: number;
+  message: string;
+}> => {
+  try {
+    const { CloudArticleService } = await import('./cloudDataService');
+    const cloudArticles = await CloudArticleService.getAllArticles();
+    
+    // 更新本地数据
+    articlesData.length = 0; // 清空现有数据
+    articlesData.push(...cloudArticles);
+    saveArticlesToStorage(articlesData);
+    
+    return {
+      success: true,
+      count: cloudArticles.length,
+      message: `成功从云端同步 ${cloudArticles.length} 篇文章`
+    };
+  } catch (error) {
+    return {
+      success: false,
+      count: 0,
+      message: error instanceof Error ? error.message : '同步失败'
+    };
+  }
+};
+
+// 将本地文章同步到云端
+export const syncToCloud = async (): Promise<{
+  success: number;
+  failed: number;
+  errors: string[];
+}> => {
+  try {
+    const { CloudArticleService } = await import('./cloudDataService');
+    return await CloudArticleService.syncLocalToCloud(articlesData);
+  } catch (error) {
+    return {
+      success: 0,
+      failed: articlesData.length,
+      errors: [error instanceof Error ? error.message : '同步服务不可用']
+    };
   }
 };
 
 // 获取所有文章
 export const getAllArticles = () => {
   return [...articlesData];
-};
-
-// 重新加载文章数据（用于同步）
-export const reloadArticles = () => {
-  articlesData = loadArticlesFromStorage();
-};
-
-// 监听数据重新加载事件
-window.addEventListener('dataReload', reloadArticles); 
+}; 

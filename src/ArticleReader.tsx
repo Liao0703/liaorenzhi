@@ -2,10 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getArticleById } from './articleData';
 import CameraCapture from './CameraCapture';
-import { savePhoto, saveUserLearningRecord, getPhotosByUserId } from './photoStorage';
+import { savePhoto } from './photoStorage';
 import { getSettings } from './settingsStorage';
 import { getFilePreviewUrl } from './fileUploadService';
-import { HybridStorageService } from './hybridStorageService';
+// import { HybridStorageService } from './hybridStorageService';
 
 interface ArticleReaderProps {
   user: any;
@@ -117,26 +117,6 @@ const ArticleReader: React.FC<ArticleReaderProps> = ({ user: _user }) => {
     });
     const finalScore = Math.round((correctCount / article.questions.length) * 100);
     setScore(finalScore);
-    
-    // 保存用户学习记录
-    if (_user) {
-      const userPhotos = getPhotosByUserId(_user.id?.toString() || '0');
-      const articlePhotos = userPhotos.filter(photo => photo.articleId === article.id);
-      
-      saveUserLearningRecord(
-        _user.id?.toString() || '0',
-        _user.name || '未知用户',
-        article.id,
-        article.title,
-        Math.floor(readingTime / 60), // 转换为分钟
-        finalScore,
-        articlePhotos,
-        finalScore >= 60 ? 'completed' : 'failed'
-      );
-      
-      console.log('用户学习记录已保存');
-    }
-    
     setCurrentStep('completed');
   };
 
@@ -227,26 +207,24 @@ const ArticleReader: React.FC<ArticleReaderProps> = ({ user: _user }) => {
       {isTimerActive && (
         <div style={{
           position: 'fixed',
-          top: '10px',
-          right: '10px',
-          background: 'rgba(0,0,0,0.7)',
-          padding: '8px 12px',
-          borderRadius: '6px',
+          top: '20px',
+          right: '20px',
+          background: 'rgba(0,0,0,0.8)',
+          padding: '15px',
+          borderRadius: '8px',
           zIndex: 1000,
-          backdropFilter: 'blur(10px)',
-          minWidth: '100px',
-          fontSize: '12px'
+          backdropFilter: 'blur(10px)'
         }}>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#409eff' }}>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#409eff' }}>
               {formatTime(readingTime)}
             </div>
-            <div style={{ fontSize: '9px', opacity: 0.8, marginTop: '1px' }}>
-              要求：{requiredTime}分钟
+            <div style={{ fontSize: '12px', opacity: 0.8 }}>
+              要求时长：{requiredTime}分钟
             </div>
             {!isPageVisible && (
-              <div style={{ fontSize: '8px', color: '#ff6b6b', marginTop: '2px' }}>
-                计时已暂停
+              <div style={{ fontSize: '12px', color: '#ff6b6b', marginTop: '5px' }}>
+                页面不可见，计时已暂停
               </div>
             )}
           </div>
@@ -256,41 +234,39 @@ const ArticleReader: React.FC<ArticleReaderProps> = ({ user: _user }) => {
       {currentStep === 'reading' && (
         <div style={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : '1fr 200px',
+          gridTemplateColumns: isMobile ? '1fr' : '1fr 300px',
           gridTemplateRows: isMobile ? '1fr auto' : 'auto',
-          gap: isMobile ? '10px' : '15px',
-          height: isMobile ? 'auto' : 'calc(100vh - 120px)',
-          padding: isMobile ? '10px' : '0'
+          gap: isMobile ? '15px' : '20px',
+          height: isMobile ? 'auto' : 'calc(100vh - 120px)'
         }}>
           {/* 文章内容 */}
           <div style={{
             background: 'rgba(0,0,0,0.3)',
-            padding: isMobile ? '15px' : '20px',
+            padding: isMobile ? '20px' : '30px',
             borderRadius: '12px',
             backdropFilter: 'blur(10px)',
             overflowY: 'auto',
             lineHeight: '1.8',
-            minHeight: isMobile ? '70vh' : 'auto',
-            order: isMobile ? 1 : 'auto',
-            flex: '1'
+            minHeight: isMobile ? '60vh' : 'auto',
+            order: isMobile ? 1 : 'auto'
           }}>
             {!isTimerActive ? (
-              <div style={{ textAlign: 'center', padding: isMobile ? '30px 0' : '50px 0' }}>
-                <h3 style={{ marginBottom: '20px', fontSize: isMobile ? '18px' : '20px' }}>准备开始学习</h3>
-                <p style={{ marginBottom: '30px', opacity: 0.8, fontSize: isMobile ? '14px' : '16px' }}>
+              <div style={{ textAlign: 'center', padding: '50px 0' }}>
+                <h3 style={{ marginBottom: '20px' }}>准备开始学习</h3>
+                <p style={{ marginBottom: '30px', opacity: 0.8 }}>
                   本文要求阅读时长：{requiredTime}分钟<br />
                   请确保在阅读过程中不要切换页面或标签页
                 </p>
                 <button
                   onClick={startReading}
                   style={{
-                    padding: isMobile ? '12px 25px' : '15px 30px',
+                    padding: '15px 30px',
                     background: 'linear-gradient(90deg,#409eff 60%,#2b8cff 100%)',
                     color: '#fff',
                     border: 'none',
                     borderRadius: '8px',
                     cursor: 'pointer',
-                    fontSize: isMobile ? '14px' : '16px',
+                    fontSize: '16px',
                     fontWeight: 'bold'
                   }}
                 >
@@ -302,12 +278,12 @@ const ArticleReader: React.FC<ArticleReaderProps> = ({ user: _user }) => {
                 {/* 文件型文章预览 */}
                 {article.fileType && article.fileType !== 'none' && (article.fileUrl || article.fileId) ? (
                   <div>
-                    <div style={{ marginBottom: '12px', padding: '10px', background: 'rgba(255,255,255,0.1)', borderRadius: '8px' }}>
-                      <h4 style={{ margin: '0 0 6px 0', fontSize: isMobile ? '14px' : '15px' }}>📄 文件预览</h4>
-                      <p style={{ margin: '0', fontSize: isMobile ? '12px' : '12px', opacity: '0.8' }}>
+                    <div style={{ marginBottom: '20px', padding: '15px', background: 'rgba(255,255,255,0.1)', borderRadius: '8px' }}>
+                      <h4 style={{ margin: '0 0 10px 0' }}>📄 文件预览</h4>
+                      <p style={{ margin: '0', fontSize: '14px', opacity: '0.8' }}>
                         文件名: {article.fileName || '未知文件'}
                         {article.storageType && (
-                          <span style={{ marginLeft: '6px', padding: '2px 4px', background: 'rgba(103, 194, 58, 0.2)', color: '#67c23a', borderRadius: '3px', fontSize: '9px' }}>
+                          <span style={{ marginLeft: '10px', padding: '2px 6px', background: 'rgba(103, 194, 58, 0.2)', color: '#67c23a', borderRadius: '4px', fontSize: '10px' }}>
                             {article.storageType === 'hybrid' ? '混合存储' : article.storageType === 'local' ? '本地存储' : 'OSS存储'}
                           </span>
                         )}
@@ -315,145 +291,27 @@ const ArticleReader: React.FC<ArticleReaderProps> = ({ user: _user }) => {
                     </div>
                     <div style={{ 
                       width: '100%', 
-                      height: isMobile ? '60vh' : '80vh', 
+                      height: '70vh', 
                       border: '1px solid rgba(255,255,255,0.2)', 
                       borderRadius: '8px',
-                      overflow: 'hidden',
-                      position: 'relative'
+                      overflow: 'hidden'
                     }}>
-                      {(() => {
-                        let fileUrl = article.fileUrl;
-                        if (article.fileId) {
-                          const storageFile = HybridStorageService.getFile(article.fileId);
-                          if (storageFile) {
-                            fileUrl = HybridStorageService.getFileUrl(storageFile);
+                      <iframe
+                        src={(() => {
+                          let fileUrl = article.fileUrl;
+                          if (article.fileId) {
+                            // 直接使用fileId构建URL，因为现在使用云服务器存储
+                            fileUrl = `${window.location.origin}/api/files/${article.fileId}`;
                           }
-                        }
-                        
-                        if (!fileUrl) {
-                          return (
-                            <div style={{
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              height: '100%',
-                              padding: '20px',
-                              textAlign: 'center'
-                            }}>
-                              <div style={{ fontSize: '48px', marginBottom: '20px', opacity: 0.6 }}>📄</div>
-                              <h3 style={{ marginBottom: '10px', fontSize: '18px' }}>文件未找到</h3>
-                              <p style={{ marginBottom: '20px', opacity: 0.8, fontSize: '14px' }}>
-                                文件可能已被移动、修改或删除
-                              </p>
-                              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                                <button
-                                  onClick={() => window.open(fileUrl || '', '_blank')}
-                                  style={{
-                                    padding: '8px 16px',
-                                    background: 'rgba(64, 158, 255, 0.8)',
-                                    color: '#fff',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    cursor: 'pointer',
-                                    fontSize: '12px'
-                                  }}
-                                >
-                                  在新窗口打开
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    if (fileUrl) {
-                                      const a = document.createElement('a');
-                                      a.href = fileUrl;
-                                      a.download = article.fileName || 'download';
-                                      a.click();
-                                    }
-                                  }}
-                                  style={{
-                                    padding: '8px 16px',
-                                    background: 'rgba(67, 194, 58, 0.8)',
-                                    color: '#fff',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    cursor: 'pointer',
-                                    fontSize: '12px'
-                                  }}
-                                >
-                                  下载文件
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        }
-                        
-                        const previewUrl = getFilePreviewUrl(fileUrl, article.fileType || 'pdf');
-                        
-                        return (
-                          <>
-                            <iframe
-                              src={previewUrl}
-                              style={{
-                                width: '100%',
-                                height: '100%',
-                                border: 'none'
-                              }}
-                              title={article.title}
-                              onError={() => {
-                                console.error('文件预览加载失败:', previewUrl);
-                              }}
-                            />
-                            {/* 备用操作按钮 */}
-                            <div style={{
-                              position: 'absolute',
-                              top: '10px',
-                              right: '10px',
-                              display: 'flex',
-                              gap: '5px'
-                            }}>
-                              <button
-                                onClick={() => window.open(fileUrl || '', '_blank')}
-                                style={{
-                                  padding: '4px 8px',
-                                  background: 'rgba(0,0,0,0.7)',
-                                  color: '#fff',
-                                  border: 'none',
-                                  borderRadius: '4px',
-                                  cursor: 'pointer',
-                                  fontSize: '10px',
-                                  backdropFilter: 'blur(10px)'
-                                }}
-                                title="在新窗口打开"
-                              >
-                                🔗
-                              </button>
-                              <button
-                                onClick={() => {
-                                  if (fileUrl) {
-                                    const a = document.createElement('a');
-                                    a.href = fileUrl;
-                                    a.download = article.fileName || 'download';
-                                    a.click();
-                                  }
-                                }}
-                                style={{
-                                  padding: '4px 8px',
-                                  background: 'rgba(0,0,0,0.7)',
-                                  color: '#fff',
-                                  border: 'none',
-                                  borderRadius: '4px',
-                                  cursor: 'pointer',
-                                  fontSize: '10px',
-                                  backdropFilter: 'blur(10px)'
-                                }}
-                                title="下载文件"
-                              >
-                                ⬇️
-                              </button>
-                            </div>
-                          </>
-                        );
-                      })()}
+                          return fileUrl ? getFilePreviewUrl(fileUrl, article.fileType || 'pdf') : '';
+                        })()}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          border: 'none'
+                        }}
+                        title={article.title}
+                      />
                     </div>
                   </div>
                 ) : (
@@ -467,28 +325,25 @@ const ArticleReader: React.FC<ArticleReaderProps> = ({ user: _user }) => {
           {/* 学习提示 */}
           <div style={{
             background: 'rgba(0,0,0,0.3)',
-            padding: isMobile ? '12px' : '15px',
+            padding: isMobile ? '15px' : '20px',
             borderRadius: '12px',
             backdropFilter: 'blur(10px)',
             height: 'fit-content',
-            order: isMobile ? 2 : 'auto',
-            minWidth: isMobile ? 'auto' : '180px'
+            order: isMobile ? 2 : 'auto'
           }}>
             <h3 style={{ 
-              marginBottom: isMobile ? '8px' : '10px',
-              fontSize: isMobile ? '14px' : '15px',
-              fontWeight: 'bold'
+              marginBottom: isMobile ? '10px' : '15px',
+              fontSize: isMobile ? '16px' : '18px'
             }}>学习提示</h3>
             <div style={{ 
-              fontSize: isMobile ? '12px' : '12px', 
-              lineHeight: isMobile ? '1.4' : '1.4',
-              opacity: '0.9'
+              fontSize: isMobile ? '13px' : '14px', 
+              lineHeight: isMobile ? '1.5' : '1.6'
             }}>
-              <p style={{ margin: isMobile ? '6px 0' : '6px 0' }}>📖 请仔细阅读文章内容</p>
-              <p style={{ margin: isMobile ? '6px 0' : '6px 0' }}>⏱️ 阅读时长达到要求后才能答题</p>
-              <p style={{ margin: isMobile ? '6px 0' : '6px 0' }}>🚫 请勿切换页面或标签页</p>
-              <p style={{ margin: isMobile ? '6px 0' : '6px 0' }}>📝 阅读完成后将进行答题测试</p>
-              <p style={{ margin: isMobile ? '6px 0' : '6px 0' }}>🎯 答题成绩将计入学习记录</p>
+              <p>📖 请仔细阅读文章内容</p>
+              <p>⏱️ 阅读时长达到要求后才能答题</p>
+              <p>🚫 请勿切换页面或标签页</p>
+              <p>📝 阅读完成后将进行答题测试</p>
+              <p>🎯 答题成绩将计入学习记录</p>
             </div>
           </div>
         </div>

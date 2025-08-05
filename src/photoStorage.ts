@@ -252,7 +252,7 @@ export const exportPhotoAsJPG = (photoRecord: PhotoRecord, fileName?: string): v
 // 批量导出用户照片为JPG
 export const exportUserPhotosAsJPG = (userId: string, userName: string): void => {
   const userPhotos = getPhotosByUserId(userId);
-  const userRecords = getUserLearningRecords(userId);
+  // const userRecords = getUserLearningRecords(userId);
   
   if (userPhotos.length === 0) {
     alert('该用户没有照片记录');
