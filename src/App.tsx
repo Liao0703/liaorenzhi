@@ -29,7 +29,17 @@ function App() {
       if (token) {
         try {
           // 验证token是否有效
-          const response = await fetch(`${window.location.hostname === '116.62.65.246' ? 'http://116.62.65.246:3001' : 'http://localhost:3001'}/api/auth/me`, {
+          const getApiUrl = () => {
+            const hostname = window.location.hostname;
+            if (hostname === '116.62.65.246' || 
+                hostname === 'www.liaorenzhi.top' || 
+                hostname === 'liaorenzhi.top' ||
+                hostname.includes('vercel.app')) {
+              return 'http://116.62.65.246:3001';
+            }
+            return 'http://localhost:3001';
+          };
+          const response = await fetch(`${getApiUrl()}/api/auth/me`, {
             headers: {
               'Authorization': `Bearer ${token}`
             }

@@ -1,7 +1,12 @@
 // API配置 - 智能环境检测
 const getApiBaseUrl = () => {
-  // 如果是云服务器环境（通过hostname检测）
-  if (window.location.hostname === '116.62.65.246') {
+  const hostname = window.location.hostname;
+  
+  // 如果是云服务器或Vercel部署环境
+  if (hostname === '116.62.65.246' || 
+      hostname === 'www.liaorenzhi.top' || 
+      hostname === 'liaorenzhi.top' ||
+      hostname.includes('vercel.app')) {
     // 云服务器环境，使用云服务器API
     return 'http://116.62.65.246:3001/api';
   }

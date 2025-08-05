@@ -25,7 +25,17 @@ const ServerStatusPanel: React.FC = () => {
   
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [isRunningTests, setIsRunningTests] = useState(false);
-  const [serverUrl] = useState(window.location.hostname === '116.62.65.246' ? 'http://116.62.65.246:3001' : 'http://localhost:3001');
+  const getServerUrl = () => {
+    const hostname = window.location.hostname;
+    if (hostname === '116.62.65.246' || 
+        hostname === 'www.liaorenzhi.top' || 
+        hostname === 'liaorenzhi.top' ||
+        hostname.includes('vercel.app')) {
+      return 'http://116.62.65.246:3001';
+    }
+    return 'http://localhost:3001';
+  };
+  const [serverUrl] = useState(getServerUrl());
 
   // 添加测试结果
   const addTestResult = (type: string, status: 'success' | 'error' | 'warning', message: string, details?: any) => {
