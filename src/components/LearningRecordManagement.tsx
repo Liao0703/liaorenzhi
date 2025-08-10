@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { learningRecordAPI } from '../config/api';
+import * as XLSX from 'xlsx';
 
 interface LearningRecord {
   id: number;
   userId: number;
   username: string;
   name: string;
+  employee_id?: string; // 工号
   articleId: string;
   articleTitle: string;
   score?: number;
@@ -15,6 +17,7 @@ interface LearningRecord {
   createdAt: string;
   department?: string;
   team?: string;
+  job_type?: string; // 工种
 }
 
 interface LearningRecordManagementProps {
@@ -36,6 +39,7 @@ const LearningRecordManagement: React.FC<LearningRecordManagementProps> = ({ cur
       userId: 1,
       username: 'user001',
       name: '张三',
+      employee_id: '10001',
       articleId: 'art001',
       articleTitle: '安全操作规程学习',
       score: 85,
@@ -44,13 +48,15 @@ const LearningRecordManagement: React.FC<LearningRecordManagementProps> = ({ cur
       quizCompleted: true,
       createdAt: '2024-01-15 14:30:00',
       department: '机务段',
-      team: 'A班组'
+      team: 'A班组',
+      job_type: '司机'
     },
     {
       id: 2,
       userId: 2,
       username: 'user002',
       name: '李四',
+      employee_id: '10002',
       articleId: 'art002',
       articleTitle: '应急处理流程',
       score: 92,
@@ -59,13 +65,15 @@ const LearningRecordManagement: React.FC<LearningRecordManagementProps> = ({ cur
       quizCompleted: true,
       createdAt: '2024-01-15 10:15:00',
       department: '车务段',
-      team: 'B班组'
+      team: 'B班组',
+      job_type: '调度员'
     },
     {
       id: 3,
       userId: 3,
       username: 'user003',
       name: '王五',
+      employee_id: '10003',
       articleId: 'art001',
       articleTitle: '安全操作规程学习',
       completionTime: '2024-01-14 16:45:00',
@@ -73,13 +81,15 @@ const LearningRecordManagement: React.FC<LearningRecordManagementProps> = ({ cur
       quizCompleted: false,
       createdAt: '2024-01-14 16:45:00',
       department: '工务段',
-      team: 'C班组'
+      team: 'C班组',
+      job_type: '线路工'
     },
     {
       id: 4,
       userId: 1,
       username: 'user001',
       name: '张三',
+      employee_id: '10001',
       articleId: 'art003',
       articleTitle: '设备维护手册',
       score: 78,
@@ -88,13 +98,15 @@ const LearningRecordManagement: React.FC<LearningRecordManagementProps> = ({ cur
       quizCompleted: true,
       createdAt: '2024-01-14 09:20:00',
       department: '机务段',
-      team: 'A班组'
+      team: 'A班组',
+      job_type: '司机'
     },
     {
       id: 5,
       userId: 4,
       username: 'user004',
       name: '赵六',
+      employee_id: '10004',
       articleId: 'art002',
       articleTitle: '应急处理流程',
       score: 88,
@@ -103,7 +115,8 @@ const LearningRecordManagement: React.FC<LearningRecordManagementProps> = ({ cur
       quizCompleted: true,
       createdAt: '2024-01-13 15:30:00',
       department: '电务段',
-      team: 'D班组'
+      team: 'D班组',
+      job_type: '信号工'
     }
   ];
 
@@ -162,29 +175,7 @@ const LearningRecordManagement: React.FC<LearningRecordManagementProps> = ({ cur
       return { username, name: record?.name || username };
     });
 
-  // 导出学习记录
-  const exportRecords = () => {
-    const csv = [
-      ['用户名', '姓名', '文章标题', '完成时间', '学习时长(分钟)', '测验分数', '测验完成', '部门', '班组'].join(','),
-      ...filteredRecords.map(record => [
-        record.username,
-        record.name,
-        record.articleTitle,
-        record.completionTime,
-        record.studyDuration,
-        record.score || '未完成',
-        record.quizCompleted ? '是' : '否',
-        record.department || '',
-        record.team || ''
-      ].join(','))
-    ].join('\n');
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `学习记录_${new Date().toLocaleDateString()}.csv`;
-    link.click();
-  };
 
   // 获取统计信息
   const getStats = () => {
@@ -199,6 +190,73 @@ const LearningRecordManagement: React.FC<LearningRecordManagementProps> = ({ cur
 
   const stats = getStats();
 
+  // 导出Excel功能
+  const exportToExcel = () => {
+    try {
+      // 准备导出的数据
+      const exportData = filteredRecords.map((record, index) => ({
+        '序号': index + 1,
+        '工号': record.employee_id || '-',
+        '姓名': record.name,
+        '用户名': record.username,
+        '单位': record.department === '机务段' ? '兴隆场车站' : (record.department || '-'),
+        '部门': record.department || '-',
+        '班组': record.team || '-',
+        '工种': record.job_type || '-',
+        '学习文章': record.articleTitle,
+        '学习时长(分钟)': record.studyDuration,
+        '测验分数': record.score || '未完成',
+        '完成状态': record.quizCompleted ? '已完成' : '未完成',
+        '完成时间': new Date(record.completionTime).toLocaleString('zh-CN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      }));
+
+      // 创建工作簿和工作表
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(exportData);
+
+      // 设置列宽
+      const colWidths = [
+        { wch: 6 },   // 序号
+        { wch: 10 },  // 工号
+        { wch: 10 },  // 姓名
+        { wch: 12 },  // 用户名
+        { wch: 15 },  // 单位
+        { wch: 12 },  // 部门
+        { wch: 10 },  // 班组
+        { wch: 12 },  // 工种
+        { wch: 20 },  // 学习文章
+        { wch: 12 },  // 学习时长
+        { wch: 10 },  // 测验分数
+        { wch: 10 },  // 完成状态
+        { wch: 16 }   // 完成时间
+      ];
+      ws['!cols'] = colWidths;
+
+      // 添加工作表到工作簿
+      XLSX.utils.book_append_sheet(wb, ws, '学习记录');
+
+      // 生成文件名（包含当前时间）
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('zh-CN').replace(/\//g, '-');
+      const timeStr = now.toLocaleTimeString('zh-CN', { hour12: false }).replace(/:/g, '-');
+      const filename = `学习记录-${dateStr}-${timeStr}.xlsx`;
+
+      // 导出文件
+      XLSX.writeFile(wb, filename);
+
+      alert(`已成功导出 ${filteredRecords.length} 条学习记录到 ${filename}`);
+    } catch (error) {
+      console.error('导出Excel失败:', error);
+      alert('导出Excel失败，请重试');
+    }
+  };
+
   return (
     <div style={{
       background: 'rgba(0,0,0,0.3)',
@@ -212,19 +270,42 @@ const LearningRecordManagement: React.FC<LearningRecordManagementProps> = ({ cur
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
           <h3 style={{ margin: 0, fontSize: '18px' }}>📊 学习记录管理</h3>
           <button
-            onClick={exportRecords}
+            onClick={exportToExcel}
+            disabled={loading || filteredRecords.length === 0}
             style={{
               padding: '8px 18px',
-              background: 'linear-gradient(90deg,#67c23a 60%,#85ce61 100%)',
+              background: loading || filteredRecords.length === 0 
+                ? 'rgba(255,255,255,0.3)' 
+                : 'linear-gradient(90deg,#67c23a 60%,#5daf34 100%)',
               color: '#fff',
               border: 'none',
               borderRadius: '8px',
-              cursor: 'pointer',
+              cursor: loading || filteredRecords.length === 0 ? 'not-allowed' : 'pointer',
               fontSize: '14px',
-              fontWeight: 500
+              fontWeight: 500,
+              opacity: loading || filteredRecords.length === 0 ? 0.7 : 1,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.3s ease',
+              boxShadow: loading || filteredRecords.length === 0 
+                ? 'none' 
+                : '0 2px 8px rgba(103, 194, 58, 0.3)'
+            }}
+            onMouseOver={(e) => {
+              if (!loading && filteredRecords.length > 0) {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(103, 194, 58, 0.4)';
+              }
+            }}
+            onMouseOut={(e) => {
+              if (!loading && filteredRecords.length > 0) {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(103, 194, 58, 0.3)';
+              }
             }}
           >
-            📥 导出记录
+            📊 导出Excel
           </button>
         </div>
 
@@ -376,25 +457,28 @@ const LearningRecordManagement: React.FC<LearningRecordManagementProps> = ({ cur
         }}>
           <thead>
             <tr style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
-              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px' }}>用户</th>
+              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px' }}>工号</th>
+              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px' }}>姓名</th>
+              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px' }}>部门</th>
+              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px' }}>班组</th>
+              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px' }}>工种</th>
               <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px' }}>文章</th>
               <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px' }}>学习时长</th>
               <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px' }}>测验分数</th>
               <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px' }}>完成状态</th>
               <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px' }}>完成时间</th>
-              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px' }}>部门/班组</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} style={{ padding: '20px', textAlign: 'center' }}>
+                <td colSpan={10} style={{ padding: '20px', textAlign: 'center' }}>
                   加载中...
                 </td>
               </tr>
             ) : filteredRecords.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ padding: '20px', textAlign: 'center' }}>
+                <td colSpan={10} style={{ padding: '20px', textAlign: 'center' }}>
                   暂无学习记录
                 </td>
               </tr>
@@ -402,9 +486,17 @@ const LearningRecordManagement: React.FC<LearningRecordManagementProps> = ({ cur
               filteredRecords.map(record => (
                 <tr key={record.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                   <td style={{ padding: '8px', fontSize: '12px' }}>
+                    <code style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px' }}>
+                      {record.employee_id || '-'}
+                    </code>
+                  </td>
+                  <td style={{ padding: '8px', fontSize: '12px' }}>
                     <div>{record.name}</div>
                     <div style={{ fontSize: '10px', opacity: 0.7 }}>@{record.username}</div>
                   </td>
+                  <td style={{ padding: '8px', fontSize: '12px' }}>{record.department || '-'}</td>
+                  <td style={{ padding: '8px', fontSize: '12px' }}>{record.team || '-'}</td>
+                  <td style={{ padding: '8px', fontSize: '12px' }}>{record.job_type || '-'}</td>
                   <td style={{ padding: '8px', fontSize: '12px' }}>
                     <div>{record.articleTitle}</div>
                   </td>
@@ -439,10 +531,6 @@ const LearningRecordManagement: React.FC<LearningRecordManagementProps> = ({ cur
                   </td>
                   <td style={{ padding: '8px', fontSize: '12px' }}>
                     {new Date(record.completionTime).toLocaleString()}
-                  </td>
-                  <td style={{ padding: '8px', fontSize: '12px' }}>
-                    <div>{record.department || '-'}</div>
-                    <div style={{ fontSize: '10px', opacity: 0.7 }}>{record.team || '-'}</div>
                   </td>
                 </tr>
               ))

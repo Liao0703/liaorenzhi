@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
+
 import { getAllArticles, updateArticle, addArticle, deleteArticle, syncFromCloud, syncToCloud } from './articleData';
 import type { ArticleData } from './articleData';
-import { getAllPhotos, getPhotoStats, clearAllPhotos, exportPhotoData } from './photoStorage';
+import { getAllPhotos, getPhotoStats, clearAllPhotos } from './photoStorage';
 import { getSettings, updateSettings } from './settingsStorage';
 import { getAllSystemData, backupData, clearAllData } from './dataManager';
-import { getLearningStorageData, getStorageUsage, exportStorageReport } from './storageViewer';
+import { getLearningStorageData, getStorageUsage } from './storageViewer';
 import { STORAGE_CONFIG } from './fileUploadService';
 import ServerConfigPanel from './OSSConfigPanel';
 import ServerStoragePanel from './HybridStoragePanel';
@@ -21,6 +22,11 @@ interface UserRecord {
   id: number;
   name: string;
   username: string;
+  employeeId: string;
+  unit: string;
+  department: string;
+  team: string;
+  jobType: string;
   completedArticles: number;
   totalStudyTime: number;
   averageScore: number;
@@ -28,16 +34,7 @@ interface UserRecord {
   status: 'active' | 'inactive';
 }
 
-interface ArticleRecord {
-  id: number;
-  title: string;
-  category: string;
-  totalReaders: number;
-  averageScore: number;
-  averageTime: number;
-  completionRate: number;
-  publishDate: string;
-}
+
 
 
 
@@ -48,12 +45,35 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
   const [showStoragePanel, setShowStoragePanel] = useState(false);
   const [showFileUpload, setShowFileUpload] = useState(false);
 
+  // 筛选状态
+  const [unitFilter, setUnitFilter] = useState<string>('');
+  const [departmentFilter, setDepartmentFilter] = useState<string>('');
+  const [teamFilter, setTeamFilter] = useState<string>('');
+  const [jobTypeFilter, setJobTypeFilter] = useState<string>('');
+
+  // 单位选项
+  const units = ['兴隆场车站'];
+  
+  // 部门选项
+  const departments = ['白市驿车站'];
+  
+  // 班组选项
+  const teams = ['运转一班', '运转二班', '运转三班', '运转四班'];
+  
+  // 工种选项
+  const jobTypes = ['车站值班员', '助理值班员（内勤）', '助理值班员（外勤）', '连结员', '调车长', '列尾作业员', '站调', '车号员'];
+
   // 模拟用户学习记录
   const userRecords: UserRecord[] = [
     {
       id: 1,
       name: '张三',
-      username: 'user1',
+      username: 'user001',
+      employeeId: '10001',
+      unit: '兴隆场车站',
+      department: '白市驿车站',
+      team: '运转一班',
+      jobType: '车站值班员',
       completedArticles: 8,
       totalStudyTime: 240,
       averageScore: 85,
@@ -63,7 +83,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
     {
       id: 2,
       name: '李四',
-      username: 'user2',
+      username: 'user002',
+      employeeId: '10002',
+      unit: '兴隆场车站',
+      department: '白市驿车站',
+      team: '运转二班',
+      jobType: '助理值班员（内勤）',
       completedArticles: 6,
       totalStudyTime: 180,
       averageScore: 78,
@@ -73,48 +98,96 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
     {
       id: 3,
       name: '王五',
-      username: 'user3',
+      username: 'user003',
+      employeeId: '10003',
+      unit: '兴隆场车站',
+      department: '白市驿车站',
+      team: '运转一班',
+      jobType: '助理值班员（外勤）',
       completedArticles: 4,
       totalStudyTime: 120,
       averageScore: 92,
       lastStudyTime: '2024-01-13 16:45',
       status: 'inactive'
+    },
+    {
+      id: 4,
+      name: '赵六',
+      username: 'user004',
+      employeeId: '10004',
+      unit: '兴隆场车站',
+      department: '白市驿车站',
+      team: '运转三班',
+      jobType: '连结员',
+      completedArticles: 5,
+      totalStudyTime: 150,
+      averageScore: 88,
+      lastStudyTime: '2024-01-12 16:20',
+      status: 'active'
+    },
+    {
+      id: 5,
+      name: '孙七',
+      username: 'user005',
+      employeeId: '10005',
+      unit: '兴隆场车站',
+      department: '白市驿车站',
+      team: '运转四班',
+      jobType: '调车长',
+      completedArticles: 7,
+      totalStudyTime: 210,
+      averageScore: 90,
+      lastStudyTime: '2024-01-16 10:15',
+      status: 'active'
+    },
+    {
+      id: 6,
+      name: '周八',
+      username: 'user006',
+      employeeId: '10006',
+      unit: '兴隆场车站',
+      department: '白市驿车站',
+      team: '运转二班',
+      jobType: '列尾作业员',
+      completedArticles: 3,
+      totalStudyTime: 90,
+      averageScore: 82,
+      lastStudyTime: '2024-01-11 14:45',
+      status: 'active'
+    },
+    {
+      id: 7,
+      name: '吴九',
+      username: 'user007',
+      employeeId: '10007',
+      unit: '兴隆场车站',
+      department: '白市驿车站',
+      team: '运转三班',
+      jobType: '站调',
+      completedArticles: 6,
+      totalStudyTime: 180,
+      averageScore: 86,
+      lastStudyTime: '2024-01-15 09:30',
+      status: 'active'
+    },
+    {
+      id: 8,
+      name: '郑十',
+      username: 'user008',
+      employeeId: '10008',
+      unit: '兴隆场车站',
+      department: '白市驿车站',
+      team: '运转四班',
+      jobType: '车号员',
+      completedArticles: 4,
+      totalStudyTime: 120,
+      averageScore: 79,
+      lastStudyTime: '2024-01-10 11:20',
+      status: 'inactive'
     }
   ];
 
-  // 模拟文章统计记录
-  const articleRecords: ArticleRecord[] = [
-    {
-      id: 1,
-      title: '铁路安全操作规程',
-      category: '安全规程',
-      totalReaders: 15,
-      averageScore: 88,
-      averageTime: 28,
-      completionRate: 93,
-      publishDate: '2024-01-01'
-    },
-    {
-      id: 2,
-      title: '设备维护保养指南',
-      category: '设备维护',
-      totalReaders: 12,
-      averageScore: 82,
-      averageTime: 42,
-      completionRate: 85,
-      publishDate: '2024-01-05'
-    },
-    {
-      id: 3,
-      title: '应急处理流程',
-      category: '应急处理',
-      totalReaders: 18,
-      averageScore: 91,
-      averageTime: 24,
-      completionRate: 96,
-      publishDate: '2024-01-10'
-    }
-  ];
+
 
   // 文章内容管理 - 使用新的数据存储系统
   const [articles, setArticles] = useState<ArticleData[]>(getAllArticles());
@@ -122,9 +195,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
   const [showForm, setShowForm] = useState(false);
   const [formType, setFormType] = useState<'add' | 'edit'>('add');
   const [cameraInterval, setCameraInterval] = useState(getSettings().cameraInterval); // 摄像头拍照间隔（秒）
+  const [enableRandomCapture, setEnableRandomCapture] = useState(getSettings().enableRandomCapture); // 启用随机拍摄
+  const [randomCaptureCount, setRandomCaptureCount] = useState(getSettings().randomCaptureCount); // 随机拍摄数量
+  const [enableAntiCheating, setEnableAntiCheating] = useState(getSettings().enableAntiCheating); // 启用防代学功能
 
   // 文章分类
-  const categories = ['安全规程', '设备维护', '应急处理', '信号系统', '调度规范', '服务标准'];
+  const categories = ['安全规程', '设备维护', '应急处理', '信号系统', '调度规范', '作业标准'];
 
   // 格式化字节数（暂时未使用）
   // const formatBytes = (bytes: number): string => {
@@ -172,6 +248,75 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
     
     // 显示提示信息
     alert('📄 文件上传成功！\n\n请在接下来的表单中：\n1. 修改文章标题和分类\n2. 设置要求阅读时间\n3. 添加考试题目（推荐）\n4. 点击保存完成创建');
+  };
+
+  // 导出学习记录到Excel
+  const exportLearningRecordsToExcel = () => {
+    try {
+      // 应用筛选条件
+      const filteredUsers = userRecords.filter(user => {
+        return (!unitFilter || user.unit === unitFilter) &&
+               (!departmentFilter || user.department === departmentFilter) &&
+               (!teamFilter || user.team === teamFilter) &&
+               (!jobTypeFilter || user.jobType === jobTypeFilter);
+      });
+
+      // 准备导出的数据
+      const exportData = filteredUsers.map((user, index) => ({
+        '序号': index + 1,
+        '工号': user.employeeId,
+        '姓名': user.name,
+        '用户名': user.username,
+        '单位': user.unit,
+        '部门': user.department,
+        '班组': user.team,
+        '工种': user.jobType,
+        '完成文章数': user.completedArticles,
+        '学习时长(分钟)': user.totalStudyTime,
+        '平均成绩': user.averageScore,
+        '最后学习时间': user.lastStudyTime,
+        '状态': user.status === 'active' ? '活跃' : '非活跃'
+      }));
+
+      // 创建工作簿和工作表
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(exportData);
+
+      // 设置列宽
+      const colWidths = [
+        { wch: 6 },   // 序号
+        { wch: 10 },  // 工号
+        { wch: 10 },  // 姓名
+        { wch: 12 },  // 用户名
+        { wch: 15 },  // 单位
+        { wch: 12 },  // 部门
+        { wch: 10 },  // 班组
+        { wch: 15 },  // 工种
+        { wch: 12 },  // 完成文章数
+        { wch: 15 },  // 学习时长
+        { wch: 10 },  // 平均成绩
+        { wch: 16 },  // 最后学习时间
+        { wch: 8 }    // 状态
+      ];
+      ws['!cols'] = colWidths;
+
+      // 添加工作表到工作簿
+      XLSX.utils.book_append_sheet(wb, ws, '学习记录统计');
+
+      // 生成文件名（包含当前时间）
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('zh-CN').replace(/\//g, '-');
+      const timeStr = now.toLocaleTimeString('zh-CN', { hour12: false }).replace(/:/g, '-');
+      const filename = `学习记录统计-${dateStr}-${timeStr}.xlsx`;
+
+      // 导出文件
+      XLSX.writeFile(wb, filename);
+
+      alert(`已成功导出 ${filteredUsers.length} 条学习记录统计到 ${filename}`);
+    } catch (error) {
+      console.error('导出Excel失败:', error);
+      alert('导出Excel失败，请重试');
+    }
   };
 
   // 打开编辑表单
@@ -246,89 +391,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
 
   // 统计数据
   const stats = {
-    totalUsers: 25,
-    activeUsers: 18,
+    totalUsers: userRecords.length,
+    activeUsers: userRecords.filter(user => user.status === 'active').length,
     totalArticles: 15,
-    totalStudyTime: 1200,
-    averageCompletionRate: 87,
-    averageScore: 84
+    totalStudyTime: Math.round(userRecords.reduce((total, user) => total + user.totalStudyTime, 0) / 60), // 转换为小时
+    averageCompletionRate: Math.round(userRecords.reduce((total, user) => total + user.completedArticles, 0) / userRecords.length),
+    averageScore: Math.round(userRecords.reduce((total, user) => total + user.averageScore, 0) / userRecords.length)
   };
 
-  // 导出Excel功能
-  const exportToExcel = () => {
-    // 创建工作簿
-    const workbook = XLSX.utils.book_new();
-    
-    // 1. 用户学习记录工作表
-    const userData = userRecords.map(user => ({
-      '用户ID': user.id,
-      '姓名': user.name,
-      '用户名': user.username,
-      '已完成文章数': user.completedArticles,
-      '总学习时长(分钟)': user.totalStudyTime,
-      '平均成绩': user.averageScore,
-      '最后学习时间': user.lastStudyTime,
-      '状态': user.status === 'active' ? '活跃' : '非活跃'
-    }));
-    const userSheet = XLSX.utils.json_to_sheet(userData);
-    XLSX.utils.book_append_sheet(workbook, userSheet, '用户学习记录');
-    
-    // 2. 文章统计工作表
-    const articleData = articleRecords.map(article => ({
-      '文章ID': article.id,
-      '文章标题': article.title,
-      '分类': article.category,
-      '学习人数': article.totalReaders,
-      '平均成绩': article.averageScore,
-      '平均学习时长(分钟)': article.averageTime,
-      '完成率(%)': article.completionRate,
-      '发布日期': article.publishDate
-    }));
-    const articleSheet = XLSX.utils.json_to_sheet(articleData);
-    XLSX.utils.book_append_sheet(workbook, articleSheet, '文章学习统计');
-    
-    // 3. 系统概览工作表
-    const overviewData = [
-      { '统计项目': '总用户数', '数值': stats.totalUsers },
-      { '统计项目': '活跃用户数', '数值': stats.activeUsers },
-      { '统计项目': '总文章数', '数值': stats.totalArticles },
-      { '统计项目': '总学习时长(小时)', '数值': stats.totalStudyTime },
-      { '统计项目': '平均完成率(%)', '数值': stats.averageCompletionRate },
-      { '统计项目': '平均成绩', '数值': stats.averageScore }
-    ];
-    const overviewSheet = XLSX.utils.json_to_sheet(overviewData);
-    XLSX.utils.book_append_sheet(workbook, overviewSheet, '系统概览');
-    
-    // 4. 文章内容工作表
-    const contentData = articles.map(article => ({
-      '文章ID': article.id,
-      '标题': article.title,
-      '分类': article.category,
-      '发布日期': new Date().toISOString().split('T')[0],
-      '要求阅读时间(分钟)': article.requiredReadingTime,
-      '内容预览': article.content.substring(0, 100) + '...'
-    }));
-    const contentSheet = XLSX.utils.json_to_sheet(contentData);
-    XLSX.utils.book_append_sheet(workbook, contentSheet, '文章内容');
-    
-    // 5. 导出信息工作表
-    const exportInfo = [
-      { '导出项目': '导出时间', '值': new Date().toLocaleString('zh-CN') },
-      { '导出项目': '导出用户', '值': '管理员' },
-      { '导出项目': '系统名称', '值': '班前学习监督系统' },
-      { '导出项目': '数据范围', '值': '全部数据' }
-    ];
-    const infoSheet = XLSX.utils.json_to_sheet(exportInfo);
-    XLSX.utils.book_append_sheet(workbook, infoSheet, '导出信息');
-    
-    // 生成文件名
-    const fileName = `班前学习系统数据_${new Date().toISOString().split('T')[0]}.xlsx`;
-    
-    // 导出文件
-    XLSX.writeFile(workbook, fileName);
-    
-    alert('Excel文件导出成功！');
-  };
+
 
   return (
     <div style={{ 
@@ -351,20 +422,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
       }}>
         <h2 style={{ margin: 0, fontSize: '24px' }}>管理后台</h2>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button
-            onClick={exportToExcel}
-            style={{
-              padding: '10px 20px',
-              background: 'linear-gradient(90deg,#67c23a 60%,#5daf34 100%)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '14px'
-            }}
-          >
-            导出Excel
-          </button>
           <button
             onClick={() => navigate('/dashboard')}
             style={{
@@ -394,7 +451,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
       }}>
         {[
           { key: 'overview', label: '总览' },
-          { key: 'users', label: '用户管理' },
+          { key: 'users', label: '学习记录' },
           { key: 'articles', label: '文章管理' },
           { key: 'statistics', label: '统计分析' },
           { key: 'photos', label: '照片管理' },
@@ -518,7 +575,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
         </div>
       )}
 
-      {/* 用户管理页面 */}
+      {/* 学习记录管理页面 */}
       {activeTab === 'users' && (
         <div style={{
           background: 'rgba(0,0,0,0.3)',
@@ -526,42 +583,276 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
           borderRadius: '12px',
           backdropFilter: 'blur(10px)'
         }}>
-          <h3 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>用户学习记录</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h3 style={{ margin: 0, fontSize: '18px' }}>学习记录管理</h3>
+            <button
+              onClick={exportLearningRecordsToExcel}
+              style={{
+                padding: '8px 18px',
+                background: 'linear-gradient(90deg,#67c23a 60%,#5daf34 100%)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 500,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.3s ease',
+                boxShadow: '0 2px 8px rgba(103, 194, 58, 0.3)'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(103, 194, 58, 0.4)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(103, 194, 58, 0.3)';
+              }}
+            >
+              📊 导出Excel
+            </button>
+          </div>
+
+          {/* 筛选器 */}
+          <div style={{
+            background: 'rgba(255,255,255,0.1)',
+            padding: '15px',
+            borderRadius: '8px',
+            marginBottom: '20px',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gap: '15px'
+          }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: '#fff' }}>单位筛选</label>
+              <select
+                value={unitFilter}
+                onChange={e => setUnitFilter(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: 'rgba(255,255,255,0.2)',
+                  color: '#fff',
+                  fontSize: '14px'
+                }}
+              >
+                <option value="">全部单位</option>
+                {units.map(unit => (
+                  <option key={unit} value={unit} style={{ background: '#2c3e50', color: '#fff' }}>{unit}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: '#fff' }}>部门筛选</label>
+              <select
+                value={departmentFilter}
+                onChange={e => setDepartmentFilter(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: 'rgba(255,255,255,0.2)',
+                  color: '#fff',
+                  fontSize: '14px'
+                }}
+              >
+                <option value="">全部部门</option>
+                {departments.map(dept => (
+                  <option key={dept} value={dept} style={{ background: '#2c3e50', color: '#fff' }}>{dept}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: '#fff' }}>班组筛选</label>
+              <select
+                value={teamFilter}
+                onChange={e => setTeamFilter(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: 'rgba(255,255,255,0.2)',
+                  color: '#fff',
+                  fontSize: '14px'
+                }}
+              >
+                <option value="">全部班组</option>
+                {teams.map(team => (
+                  <option key={team} value={team} style={{ background: '#2c3e50', color: '#fff' }}>{team}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: '#fff' }}>工种筛选</label>
+              <select
+                value={jobTypeFilter}
+                onChange={e => setJobTypeFilter(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: 'rgba(255,255,255,0.2)',
+                  color: '#fff',
+                  fontSize: '14px'
+                }}
+              >
+                <option value="">全部工种</option>
+                {jobTypes.map(jobType => (
+                  <option key={jobType} value={jobType} style={{ background: '#2c3e50', color: '#fff' }}>{jobType}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'end' }}>
+              <button
+                onClick={() => {
+                  setUnitFilter('');
+                  setDepartmentFilter('');
+                  setTeamFilter('');
+                  setJobTypeFilter('');
+                }}
+                style={{
+                  padding: '8px 16px',
+                  background: 'rgba(255,255,255,0.2)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                🔄 重置筛选
+              </button>
+            </div>
+          </div>
+
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px', overflow: 'hidden' }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
-                  <th style={{ padding: '12px', textAlign: 'left' }}>姓名</th>
-                  <th style={{ padding: '12px', textAlign: 'left' }}>完成文章</th>
-                  <th style={{ padding: '12px', textAlign: 'left' }}>学习时长</th>
-                  <th style={{ padding: '12px', textAlign: 'left' }}>平均成绩</th>
-                  <th style={{ padding: '12px', textAlign: 'left' }}>最后学习</th>
-                  <th style={{ padding: '12px', textAlign: 'left' }}>状态</th>
+                <tr style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
+                  <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '14px' }}>工号</th>
+                  <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '14px' }}>姓名</th>
+                  <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '14px' }}>单位</th>
+                  <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '14px' }}>部门</th>
+                  <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '14px' }}>班组</th>
+                  <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '14px' }}>工种</th>
+                  <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '14px' }}>完成文章</th>
+                  <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '14px' }}>学习时长</th>
+                  <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '14px' }}>平均成绩</th>
+                  <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '14px' }}>最后学习</th>
+                  <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '14px' }}>状态</th>
                 </tr>
               </thead>
               <tbody>
-                {userRecords.map(user => (
-                  <tr key={user.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                    <td style={{ padding: '12px' }}>{user.name}</td>
-                    <td style={{ padding: '12px' }}>{user.completedArticles}</td>
-                    <td style={{ padding: '12px' }}>{user.totalStudyTime}分钟</td>
-                    <td style={{ padding: '12px' }}>{user.averageScore}分</td>
-                    <td style={{ padding: '12px' }}>{user.lastStudyTime}</td>
-                    <td style={{ padding: '12px' }}>
-                      <span style={{
-                        padding: '4px 8px',
-                        background: user.status === 'active' ? '#67c23a' : '#909399',
-                        color: '#fff',
-                        borderRadius: '4px',
-                        fontSize: '12px'
-                      }}>
-                        {user.status === 'active' ? '活跃' : '非活跃'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {(() => {
+                  const filteredUsers = userRecords.filter(user => {
+                    return (!unitFilter || user.unit === unitFilter) &&
+                           (!departmentFilter || user.department === departmentFilter) &&
+                           (!teamFilter || user.team === teamFilter) &&
+                           (!jobTypeFilter || user.jobType === jobTypeFilter);
+                  });
+
+                  return filteredUsers.map(user => (
+                    <tr key={user.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                      <td style={{ padding: '8px', fontSize: '14px' }}>
+                        <code style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px', fontSize: '12px' }}>
+                          {user.employeeId}
+                        </code>
+                      </td>
+                      <td style={{ padding: '8px', fontSize: '14px', fontWeight: '500' }}>{user.name}</td>
+                      <td style={{ padding: '8px', fontSize: '14px' }}>
+                        <span style={{
+                          background: 'rgba(230, 162, 60, 0.2)',
+                          color: '#e6a23c',
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          fontSize: '12px'
+                        }}>
+                          {user.unit}
+                        </span>
+                      </td>
+                      <td style={{ padding: '8px', fontSize: '14px' }}>{user.department}</td>
+                      <td style={{ padding: '8px', fontSize: '14px' }}>
+                        <span style={{
+                          background: 'rgba(64, 158, 255, 0.2)',
+                          color: '#409eff',
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          fontSize: '12px'
+                        }}>
+                          {user.team}
+                        </span>
+                      </td>
+                      <td style={{ padding: '8px', fontSize: '14px' }}>
+                        <span style={{
+                          background: 'rgba(103, 194, 58, 0.2)',
+                          color: '#67c23a',
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          fontSize: '12px'
+                        }}>
+                          {user.jobType}
+                        </span>
+                      </td>
+                      <td style={{ padding: '8px', fontSize: '14px' }}>{user.completedArticles}</td>
+                      <td style={{ padding: '8px', fontSize: '14px' }}>{user.totalStudyTime}分钟</td>
+                      <td style={{ padding: '8px', fontSize: '14px' }}>
+                        <span style={{
+                          background: user.averageScore >= 90 ? '#67c23a' : user.averageScore >= 80 ? '#e6a23c' : '#f56c6c',
+                          color: '#fff',
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          fontSize: '12px'
+                        }}>
+                          {user.averageScore}分
+                        </span>
+                      </td>
+                      <td style={{ padding: '8px', fontSize: '14px' }}>{user.lastStudyTime}</td>
+                      <td style={{ padding: '8px', fontSize: '14px' }}>
+                        <span style={{
+                          padding: '4px 8px',
+                          background: user.status === 'active' ? '#67c23a' : '#909399',
+                          color: '#fff',
+                          borderRadius: '4px',
+                          fontSize: '12px'
+                        }}>
+                          {user.status === 'active' ? '活跃' : '非活跃'}
+                        </span>
+                      </td>
+                    </tr>
+                  ));
+                })()}
               </tbody>
             </table>
+          </div>
+
+          {/* 显示筛选结果统计 */}
+          <div style={{ 
+            marginTop: '15px', 
+            textAlign: 'center', 
+            fontSize: '14px', 
+            opacity: 0.8,
+            color: '#fff'
+          }}>
+            {(() => {
+              const filteredCount = userRecords.filter(user => {
+                return (!unitFilter || user.unit === unitFilter) &&
+                       (!departmentFilter || user.department === departmentFilter) &&
+                       (!teamFilter || user.team === teamFilter) &&
+                       (!jobTypeFilter || user.jobType === jobTypeFilter);
+              }).length;
+              return `显示 ${filteredCount} 条记录，共 ${userRecords.length} 条`;
+            })()}
           </div>
         </div>
       )}
@@ -719,282 +1010,381 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
 
           {/* 文章编辑/添加表单弹窗 */}
           {showForm && (
-            <div style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              width: '100vw',
-              height: '100vh',
-              background: 'rgba(0,0,0,0.4)',
-              zIndex: 9999,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <form
-                onSubmit={handleFormSubmit}
+            <div 
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                width: '100vw',
+                height: '100vh',
+                background: 'rgba(0,0,0,0.4)',
+                zIndex: 9999,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '20px'
+              }}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                  setShowForm(false);
+                  setEditArticle(null);
+                }
+              }}
+            >
+              <div
                 style={{
                   background: '#222',
-                  padding: '32px 24px',
                   borderRadius: '16px',
-                  minWidth: 300,
-                  maxWidth: 400,
-                  width: '90vw',
-                  boxShadow: '0 6px 36px #2225',
+                  minWidth: 800,
+                  maxWidth: 1200,
+                  width: '95vw',
+                  maxHeight: '90vh',
+                  boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '18px',
-                  color: '#fff'
+                  color: '#fff',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  overflow: 'hidden'
                 }}
+                onClick={(e) => e.stopPropagation()}
               >
-                <h3 style={{ margin: 0 }}>{formType === 'add' ? '添加文章' : '编辑文章'}</h3>
-                <label>
-                  标题：
-                  <input
-                    type="text"
-                    value={editArticle?.title || ''}
-                    onChange={e => setEditArticle(editArticle ? { ...editArticle, title: e.target.value } : null)}
-                    style={{ width: '100%', padding: 8, borderRadius: 6, border: 'none', marginTop: 4 }}
-                    required
-                  />
-                </label>
-                <label>
-                  分类：
-                  <select
-                    value={editArticle?.category || categories[0]}
-                    onChange={e => setEditArticle(editArticle ? { ...editArticle, category: e.target.value } : null)}
-                    style={{ width: '100%', padding: 8, borderRadius: 6, border: 'none', marginTop: 4 }}
-                  >
-                    {categories.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  要求阅读时间（分钟）：
-                  <input
-                    type="number"
-                    min="1"
-                    max="120"
-                    value={editArticle?.requiredReadingTime || 30}
-                    onChange={e => setEditArticle(editArticle ? { ...editArticle, requiredReadingTime: parseInt(e.target.value) || 30 } : null)}
-                    style={{ width: '100%', padding: 8, borderRadius: 6, border: 'none', marginTop: 4 }}
-                    required
-                  />
-                </label>
-                <label>
-                  内容：
-                  <textarea
-                    value={editArticle?.content || ''}
-                    onChange={e => setEditArticle(editArticle ? { ...editArticle, content: e.target.value } : null)}
-                    style={{ width: '100%', minHeight: 80, borderRadius: 6, border: 'none', marginTop: 4, resize: 'vertical' }}
-                    required
-                  />
-                </label>
-
-                {/* 题目录入部分 */}
+                {/* 固定标题栏 */}
                 <div style={{ 
-                  borderTop: '1px solid rgba(255,255,255,0.2)', 
-                  paddingTop: '18px',
-                  marginTop: '10px'
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  padding: '20px 20px 15px 20px',
+                  borderBottom: '1px solid rgba(255,255,255,0.1)',
+                  flexShrink: 0
                 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <h4 style={{ margin: 0, fontSize: '16px' }}>📝 考试题目 ({editArticle?.questions?.length || 0}题)</h4>
+                  <h3 style={{ margin: 0, fontSize: '18px' }}>{formType === 'add' ? '添加文章' : '编辑文章'}</h3>
+                  
+                  {/* 操作按钮组 */}
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                     <button
                       type="button"
-                      onClick={() => {
-                        if (editArticle) {
-                          const newQuestion = {
-                            id: Date.now(),
-                            question: '',
-                            options: ['', '', '', ''],
-                            correctAnswer: 0
-                          };
-                          setEditArticle({
-                            ...editArticle,
-                            questions: [...(editArticle.questions || []), newQuestion]
-                          });
-                        }
-                      }}
+                      onClick={() => { setShowForm(false); setEditArticle(null); }}
                       style={{
                         padding: '6px 12px',
-                        background: 'linear-gradient(90deg,#67c23a 60%,#5daf34 100%)',
+                        background: 'rgba(255,255,255,0.2)',
                         color: '#fff',
                         border: 'none',
                         borderRadius: '6px',
                         cursor: 'pointer',
-                        fontSize: '12px'
+                        fontSize: '12px',
+                        transition: 'background 0.3s ease'
                       }}
+                      onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.3)')}
+                      onMouseOut={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.2)')}
                     >
-                      ➕ 添加题目
+                      取消
+                    </button>
+                    <button
+                      type="submit"
+                      form="article-form"
+                      style={{
+                        padding: '6px 12px',
+                        background: 'linear-gradient(90deg,#409eff 60%,#2b8cff 100%)',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        transition: 'transform 0.2s ease'
+                      }}
+                      onMouseOver={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
+                      onMouseOut={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+                    >
+                      保存
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setShowForm(false); setEditArticle(null); }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#fff',
+                        fontSize: '18px',
+                        cursor: 'pointer',
+                        padding: '5px',
+                        borderRadius: '4px',
+                        opacity: 0.7,
+                        transition: 'opacity 0.3s ease'
+                      }}
+                      onMouseOver={(e) => (e.currentTarget.style.opacity = '1')}
+                      onMouseOut={(e) => (e.currentTarget.style.opacity = '0.7')}
+                      title="关闭"
+                    >
+                      ✕
                     </button>
                   </div>
+                </div>
 
-                  {/* 题目列表 */}
-                  <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                    {editArticle?.questions?.map((question, qIndex) => (
-                      <div key={question.id} style={{
-                        background: 'rgba(255,255,255,0.05)',
-                        padding: '15px',
-                        borderRadius: '8px',
-                        marginBottom: '12px',
-                        border: '1px solid rgba(255,255,255,0.1)'
-                      }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                          <span style={{ fontSize: '14px', fontWeight: 'bold' }}>题目 {qIndex + 1}</span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (editArticle) {
-                                const updatedQuestions = editArticle.questions.filter((_, index) => index !== qIndex);
-                                setEditArticle({ ...editArticle, questions: updatedQuestions });
-                              }
-                            }}
-                            style={{
-                              padding: '4px 8px',
-                              background: 'rgba(245, 108, 108, 0.2)',
-                              color: '#f56c6c',
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              fontSize: '12px'
-                            }}
-                          >
-                            删除
-                          </button>
-                        </div>
-                        
+                <form
+                  id="article-form"
+                  onSubmit={handleFormSubmit}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: '100%',
+                    overflow: 'hidden'
+                  }}
+                >
+                  {/* 左右分栏内容区域 */}
+                  <div style={{
+                    flex: 1,
+                    display: 'flex',
+                    gap: '20px',
+                    overflow: 'hidden'
+                  }}>
+                    {/* 左侧：基本信息 */}
+                    <div style={{
+                      flex: '1',
+                      overflowY: 'auto',
+                      padding: '20px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '16px'
+                    }}>
+                      <label>
+                        标题：
+                        <input
+                          type="text"
+                          value={editArticle?.title || ''}
+                          onChange={e => setEditArticle(editArticle ? { ...editArticle, title: e.target.value } : null)}
+                          style={{ width: '100%', padding: 8, borderRadius: 6, border: 'none', marginTop: 4, boxSizing: 'border-box' }}
+                          required
+                        />
+                      </label>
+                      <label>
+                        分类：
+                        <select
+                          value={editArticle?.category || categories[0]}
+                          onChange={e => setEditArticle(editArticle ? { ...editArticle, category: e.target.value } : null)}
+                          style={{ width: '100%', padding: 8, borderRadius: 6, border: 'none', marginTop: 4, boxSizing: 'border-box' }}
+                        >
+                          {categories.map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        要求阅读时间（分钟）：
+                        <input
+                          type="number"
+                          min="1"
+                          max="120"
+                          value={editArticle?.requiredReadingTime || 30}
+                          onChange={e => setEditArticle(editArticle ? { ...editArticle, requiredReadingTime: parseInt(e.target.value) || 30 } : null)}
+                          style={{ width: '100%', padding: 8, borderRadius: 6, border: 'none', marginTop: 4, boxSizing: 'border-box' }}
+                          required
+                        />
+                      </label>
+                      <label>
+                        内容：
                         <textarea
-                          placeholder="请输入题目内容..."
-                          value={question.question}
-                          onChange={(e) => {
+                          value={editArticle?.content || ''}
+                          onChange={e => setEditArticle(editArticle ? { ...editArticle, content: e.target.value } : null)}
+                          style={{ 
+                            width: '100%', 
+                            minHeight: 200, 
+                            maxHeight: 300,
+                            borderRadius: 6, 
+                            border: 'none', 
+                            marginTop: 4, 
+                            resize: 'vertical',
+                            boxSizing: 'border-box'
+                          }}
+                          required
+                        />
+                      </label>
+                    </div>
+
+                    {/* 右侧：题目编辑 */}
+                    <div style={{
+                      flex: '1',
+                      borderLeft: '1px solid rgba(255,255,255,0.1)',
+                      padding: '20px',
+                      display: 'flex',
+                      flexDirection: 'column'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                        <h4 style={{ margin: 0, fontSize: '16px' }}>📝 考试题目 ({editArticle?.questions?.length || 0}题)</h4>
+                        <button
+                          type="button"
+                          onClick={() => {
                             if (editArticle) {
-                              const updatedQuestions = [...editArticle.questions];
-                              updatedQuestions[qIndex] = { ...question, question: e.target.value };
-                              setEditArticle({ ...editArticle, questions: updatedQuestions });
+                              const newQuestion = {
+                                id: Date.now(),
+                                question: '',
+                                options: ['', '', '', ''],
+                                correctAnswer: 0
+                              };
+                              setEditArticle({
+                                ...editArticle,
+                                questions: [...(editArticle.questions || []), newQuestion]
+                              });
                             }
                           }}
                           style={{
-                            width: '100%',
-                            minHeight: '60px',
-                            padding: '8px',
-                            borderRadius: '6px',
+                            padding: '6px 12px',
+                            background: 'linear-gradient(90deg,#67c23a 60%,#5daf34 100%)',
+                            color: '#fff',
                             border: 'none',
-                            marginBottom: '10px',
-                            resize: 'vertical',
-                            fontSize: '14px'
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '12px'
                           }}
-                        />
-                        
-                        {/* 选项输入 */}
-                        <div style={{ display: 'grid', gap: '8px' }}>
-                          {question.options.map((option, oIndex) => {
-                            const optionLabels = ['A', 'B', 'C', 'D'];
-                            const isCorrect = question.correctAnswer === oIndex;
-                            return (
-                              <div key={oIndex} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (editArticle) {
-                                      const updatedQuestions = [...editArticle.questions];
-                                      updatedQuestions[qIndex] = { ...question, correctAnswer: oIndex };
-                                      setEditArticle({ ...editArticle, questions: updatedQuestions });
-                                    }
-                                  }}
-                                  style={{
-                                    width: '24px',
-                                    height: '24px',
-                                    borderRadius: '50%',
-                                    border: `2px solid ${isCorrect ? '#67c23a' : 'rgba(255,255,255,0.3)'}`,
-                                    background: isCorrect ? '#67c23a' : 'transparent',
-                                    color: isCorrect ? '#fff' : 'rgba(255,255,255,0.6)',
-                                    cursor: 'pointer',
-                                    fontSize: '12px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
-                                  }}
-                                  title={`点击设为正确答案`}
-                                >
-                                  {isCorrect ? '✓' : optionLabels[oIndex]}
-                                </button>
-                                <input
-                                  type="text"
-                                  placeholder={`选项${optionLabels[oIndex]}`}
-                                  value={option}
-                                  onChange={(e) => {
-                                    if (editArticle) {
-                                      const updatedQuestions = [...editArticle.questions];
-                                      const updatedOptions = [...question.options];
-                                      updatedOptions[oIndex] = e.target.value;
-                                      updatedQuestions[qIndex] = { ...question, options: updatedOptions };
-                                      setEditArticle({ ...editArticle, questions: updatedQuestions });
-                                    }
-                                  }}
-                                  style={{
-                                    flex: 1,
-                                    padding: '6px 10px',
-                                    borderRadius: '4px',
-                                    border: `1px solid ${isCorrect ? '#67c23a' : 'rgba(255,255,255,0.2)'}`,
-                                    background: isCorrect ? 'rgba(103, 194, 58, 0.1)' : 'rgba(255,255,255,0.05)',
-                                    color: '#fff',
-                                    fontSize: '13px'
-                                  }}
-                                />
-                              </div>
-                            );
-                          })}
-                        </div>
+                        >
+                          ➕ 添加题目
+                        </button>
                       </div>
-                    ))}
-                  </div>
 
-                  {editArticle?.questions?.length === 0 && (
-                    <div style={{
-                      textAlign: 'center',
-                      padding: '30px',
-                      color: 'rgba(255,255,255,0.6)',
-                      fontSize: '14px'
-                    }}>
-                      还没有添加题目，点击"➕ 添加题目"开始录入
+                      {/* 题目列表 */}
+                      <div style={{ 
+                        flex: 1,
+                        overflowY: 'auto',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '6px',
+                        padding: '10px',
+                        background: 'rgba(255,255,255,0.02)'
+                      }}>
+                        {editArticle?.questions?.map((question, qIndex) => (
+                          <div key={question.id} style={{
+                            background: 'rgba(255,255,255,0.05)',
+                            padding: '12px',
+                            borderRadius: '6px',
+                            marginBottom: '10px',
+                            border: '1px solid rgba(255,255,255,0.1)'
+                          }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                              <span style={{ fontSize: '14px', fontWeight: 'bold' }}>题目 {qIndex + 1}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (editArticle) {
+                                    const updatedQuestions = editArticle.questions.filter((_, index) => index !== qIndex);
+                                    setEditArticle({ ...editArticle, questions: updatedQuestions });
+                                  }
+                                }}
+                                style={{
+                                  padding: '4px 8px',
+                                  background: 'rgba(245, 108, 108, 0.2)',
+                                  color: '#f56c6c',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  fontSize: '12px'
+                                }}
+                              >
+                                删除
+                              </button>
+                            </div>
+                            
+                            <textarea
+                              placeholder="请输入题目内容..."
+                              value={question.question}
+                              onChange={(e) => {
+                                if (editArticle) {
+                                  const updatedQuestions = [...editArticle.questions];
+                                  updatedQuestions[qIndex] = { ...question, question: e.target.value };
+                                  setEditArticle({ ...editArticle, questions: updatedQuestions });
+                                }
+                              }}
+                              style={{
+                                width: '100%',
+                                minHeight: '50px',
+                                maxHeight: '80px',
+                                padding: '6px',
+                                borderRadius: '4px',
+                                border: 'none',
+                                marginBottom: '8px',
+                                resize: 'vertical',
+                                fontSize: '13px',
+                                boxSizing: 'border-box'
+                              }}
+                            />
+                            
+                            {/* 选项输入 */}
+                            <div style={{ display: 'grid', gap: '6px' }}>
+                              {question.options.map((option, oIndex) => {
+                                const optionLabels = ['A', 'B', 'C', 'D'];
+                                const isCorrect = question.correctAnswer === oIndex;
+                                return (
+                                  <div key={oIndex} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (editArticle) {
+                                          const updatedQuestions = [...editArticle.questions];
+                                          updatedQuestions[qIndex] = { ...question, correctAnswer: oIndex };
+                                          setEditArticle({ ...editArticle, questions: updatedQuestions });
+                                        }
+                                      }}
+                                      style={{
+                                        width: '20px',
+                                        height: '20px',
+                                        borderRadius: '50%',
+                                        border: `2px solid ${isCorrect ? '#67c23a' : 'rgba(255,255,255,0.3)'}`,
+                                        background: isCorrect ? '#67c23a' : 'transparent',
+                                        color: isCorrect ? '#fff' : 'rgba(255,255,255,0.6)',
+                                        cursor: 'pointer',
+                                        fontSize: '10px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                      }}
+                                      title={`点击设为正确答案`}
+                                    >
+                                      {isCorrect ? '✓' : optionLabels[oIndex]}
+                                    </button>
+                                    <input
+                                      type="text"
+                                      placeholder={`选项${optionLabels[oIndex]}`}
+                                      value={option}
+                                      onChange={(e) => {
+                                        if (editArticle) {
+                                          const updatedQuestions = [...editArticle.questions];
+                                          const updatedOptions = [...question.options];
+                                          updatedOptions[oIndex] = e.target.value;
+                                          updatedQuestions[qIndex] = { ...question, options: updatedOptions };
+                                          setEditArticle({ ...editArticle, questions: updatedQuestions });
+                                        }
+                                      }}
+                                      style={{
+                                        flex: 1,
+                                        padding: '4px 6px',
+                                        borderRadius: '4px',
+                                        border: `1px solid ${isCorrect ? '#67c23a' : 'rgba(255,255,255,0.2)'}`,
+                                        background: isCorrect ? 'rgba(103, 194, 58, 0.1)' : 'rgba(255,255,255,0.05)',
+                                        color: '#fff',
+                                        fontSize: '11px',
+                                        boxSizing: 'border-box'
+                                      }}
+                                    />
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+
+                        {(!editArticle?.questions || editArticle?.questions?.length === 0) && (
+                          <div style={{
+                            textAlign: 'center',
+                            padding: '30px 20px',
+                            color: 'rgba(255,255,255,0.6)',
+                            fontSize: '12px'
+                          }}>
+                            还没有添加题目<br/>点击"➕ 添加题目"开始录入
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </div>
-
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                  <button
-                    type="button"
-                    onClick={() => { setShowForm(false); setEditArticle(null); }}
-                    style={{
-                      padding: '8px 18px',
-                      background: 'rgba(255,255,255,0.2)',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontSize: '14px'
-                    }}
-                  >
-                    取消
-                  </button>
-                  <button
-                    type="submit"
-                    style={{
-                      padding: '8px 18px',
-                      background: 'linear-gradient(90deg,#409eff 60%,#2b8cff 100%)',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: 500
-                    }}
-                  >
-                    保存
-                  </button>
-                </div>
-              </form>
+                  </div>
+                </form>
+              </div>
             </div>
           )}
         </div>
@@ -1039,7 +1429,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
           }}>
             <h3 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>分类学习情况</h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px' }}>
-              {['安全规程', '设备维护', '应急处理', '信号系统', '调度规范', '服务标准'].map(category => (
+              {['安全规程', '设备维护', '应急处理', '信号系统', '调度规范', '作业标准'].map(category => (
                 <div key={category} style={{
                   background: 'rgba(255,255,255,0.1)',
                   padding: '15px',
@@ -1102,29 +1492,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
               <h4 style={{ margin: 0, fontSize: '16px' }}>最近照片</h4>
               <div style={{ display: 'flex', gap: '10px' }}>
-                <button
-                  onClick={() => {
-                    const data = exportPhotoData();
-                    const blob = new Blob([data], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `学习监控照片_${new Date().toISOString().split('T')[0]}.json`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                  }}
-                  style={{
-                    padding: '6px 12px',
-                    background: 'linear-gradient(90deg,#67c23a 60%,#5daf34 100%)',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '12px'
-                  }}
-                >
-                  导出照片数据
-                </button>
                 <button
                   onClick={() => {
                     if (window.confirm('确定要清空所有照片吗？此操作不可恢复！')) {
@@ -1220,7 +1587,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
             marginBottom: '20px'
           }}>
             <h4 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>📷 摄像头监控设置</h4>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            
+            {/* 基础拍照间隔设置 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
               <label style={{ fontSize: '14px' }}>
                 拍照间隔：
                 <input
@@ -1239,11 +1608,86 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
                 />
                 秒
               </label>
-                              <button
-                  onClick={() => {
-                    updateSettings({ cameraInterval });
-                    alert(`摄像头拍照间隔已设置为 ${cameraInterval} 秒`);
-                  }}
+            </div>
+
+            {/* 随机拍摄设置 */}
+            <div style={{ marginBottom: '20px', padding: '15px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
+                <label style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input
+                    type="checkbox"
+                    checked={enableRandomCapture}
+                    onChange={(e) => setEnableRandomCapture(e.target.checked)}
+                    style={{ transform: 'scale(1.2)' }}
+                  />
+                  🎲 启用随机拍摄N张
+                </label>
+                {enableRandomCapture && (
+                  <label style={{ fontSize: '14px' }}>
+                    拍摄数量：
+                    <input
+                      type="number"
+                      min="1"
+                      max="10"
+                      value={randomCaptureCount}
+                      onChange={(e) => setRandomCaptureCount(parseInt(e.target.value) || 3)}
+                      style={{
+                        marginLeft: '10px',
+                        padding: '6px',
+                        borderRadius: '4px',
+                        border: 'none',
+                        width: '60px'
+                      }}
+                    />
+                    张
+                  </label>
+                )}
+              </div>
+              <p style={{ 
+                margin: '0', 
+                fontSize: '12px', 
+                opacity: 0.7,
+                lineHeight: '1.3'
+              }}>
+                说明：启用后，系统会在学习过程中随机时间点连续拍摄N张照片，增强监控效果。
+              </p>
+            </div>
+
+            {/* 防代学功能设置 */}
+            <div style={{ marginBottom: '20px', padding: '15px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
+                <label style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input
+                    type="checkbox"
+                    checked={enableAntiCheating}
+                    onChange={(e) => setEnableAntiCheating(e.target.checked)}
+                    style={{ transform: 'scale(1.2)' }}
+                  />
+                  🔒 启用防代学功能
+                </label>
+              </div>
+              <p style={{ 
+                margin: '0', 
+                fontSize: '12px', 
+                opacity: 0.7,
+                lineHeight: '1.3'
+              }}>
+                说明：启用后，系统会进行人脸识别，当检测到不是本人时，学习进度将暂停，需要本人重新验证身份。
+              </p>
+            </div>
+
+            {/* 保存按钮 */}
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <button
+                onClick={() => {
+                  updateSettings({ 
+                    cameraInterval,
+                    enableRandomCapture,
+                    randomCaptureCount,
+                    enableAntiCheating 
+                  });
+                  alert(`摄像头设置已保存！\n拍照间隔: ${cameraInterval}秒\n随机拍摄: ${enableRandomCapture ? '启用' : '关闭'}${enableRandomCapture ? `(${randomCaptureCount}张)` : ''}\n防代学功能: ${enableAntiCheating ? '启用' : '关闭'}`);
+                }}
                 style={{
                   padding: '8px 16px',
                   background: 'linear-gradient(90deg,#409eff 60%,#2b8cff 100%)',
@@ -1257,8 +1701,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
                 保存设置
               </button>
             </div>
+
             <p style={{ 
-              margin: '10px 0 0 0', 
+              margin: '15px 0 0 0', 
               fontSize: '12px', 
               opacity: 0.8,
               lineHeight: '1.4'
@@ -1337,29 +1782,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
               >
                 备份所有数据
               </button>
-              <button
-                onClick={() => {
-                  const report = exportStorageReport();
-                  const blob = new Blob([report], { type: 'text/markdown' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `存储报告_${new Date().toISOString().split('T')[0]}.md`;
-                  a.click();
-                  URL.revokeObjectURL(url);
-                }}
-                style={{
-                  padding: '8px 16px',
-                  background: 'linear-gradient(90deg,#409eff 60%,#2b8cff 100%)',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '14px'
-                }}
-              >
-                导出存储报告
-              </button>
+
               <button
                 onClick={() => {
                   if (window.confirm('确定要清空所有数据吗？此操作不可恢复！')) {

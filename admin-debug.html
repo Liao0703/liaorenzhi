@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin角色调试工具</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+        }
+        .debug-section {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .debug-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+        }
+        .btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        .btn:hover {
+            background: #45a049;
+        }
+        .btn-danger {
+            background: #f44336;
+        }
+        .btn-danger:hover {
+            background: #da190b;
+        }
+        .btn-warning {
+            background: #ff9800;
+        }
+        .btn-warning:hover {
+            background: #e68900;
+        }
+        .status {
+            padding: 8px 16px;
+            border-radius: 5px;
+            margin: 5px 0;
+            font-weight: bold;
+        }
+        .status.success {
+            background: rgba(76, 175, 80, 0.3);
+            border: 1px solid #4CAF50;
+        }
+        .status.error {
+            background: rgba(244, 67, 54, 0.3);
+            border: 1px solid #f44336;
+        }
+        .status.warning {
+            background: rgba(255, 152, 0, 0.3);
+            border: 1px solid #ff9800;
+        }
+        h1, h2 {
+            color: #fff;
+            text-align: center;
+        }
+        .log-area {
+            background: #000;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Admin角色调试工具</h1>
+        
+        <div class="debug-section">
+            <h2>当前状态检查</h2>
+            <div class="debug-item">
+                <strong>Token状态:</strong> <span id="tokenStatus">检查中...</span>
+            </div>
+            <div class="debug-item">
+                <strong>本地用户数据:</strong> <span id="localUserData">检查中...</span>
+            </div>
+            <div class="debug-item">
+                <strong>服务器用户数据:</strong> <span id="serverUserData">检查中...</span>
+            </div>
+            <div class="debug-item">
+                <strong>当前用户角色:</strong> <span id="currentRole">检查中...</span>
+            </div>
+        </div>
+
+        <div class="debug-section">
+            <h2>诊断操作</h2>
+            <button class="btn" onclick="checkAuthStatus()">🔍 检查认证状态</button>
+            <button class="btn" onclick="testAdminLogin()">👑 测试Admin登录</button>
+            <button class="btn btn-warning" onclick="clearStorageData()">🗑️ 清除本地数据</button>
+            <button class="btn btn-danger" onclick="forceAdminRole()">⚡ 强制设置Admin角色</button>
+        </div>
+
+        <div class="debug-section">
+            <h2>快速修复</h2>
+            <button class="btn" onclick="syncUserData()">🔄 同步用户数据</button>
+            <button class="btn" onclick="validateToken()">✅ 验证Token</button>
+            <button class="btn" onclick="refreshUserInfo()">🔃 刷新用户信息</button>
+        </div>
+
+        <div class="debug-section">
+            <h2>调试日志</h2>
+            <div class="log-area" id="debugLog">准备开始调试...\n</div>
+            <button class="btn btn-warning" onclick="clearLog()">清除日志</button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logArea = document.getElementById('debugLog');
+            const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
+            logArea.textContent += `[${timestamp}] ${prefix} ${message}\n`;
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('debugLog').textContent = '日志已清除...\n';
+        }
+
+        async function getApiUrl() {
+            const hostname = window.location.hostname;
+            if (hostname === '116.62.65.246' || 
+                hostname === 'www.liaorenzhi.top' || 
+                hostname === 'liaorenzhi.top' ||
+                hostname.includes('vercel.app')) {
+                return 'http://116.62.65.246:3001';
+            }
+            return 'http://localhost:3001';
+        }
+
+        async function checkAuthStatus() {
+            log('开始检查认证状态...');
+            
+            // 检查Token
+            const token = localStorage.getItem('auth_token');
+            const tokenStatus = document.getElementById('tokenStatus');
+            if (token) {
+                tokenStatus.innerHTML = `<span class="status success">存在 (${token.substring(0, 20)}...)</span>`;
+                log('Token存在: ' + token.substring(0, 50) + '...', 'success');
+            } else {
+                tokenStatus.innerHTML = `<span class="status error">不存在</span>`;
+                log('Token不存在', 'error');
+                return;
+            }
+
+            // 检查本地用户数据
+            const localUser = localStorage.getItem('learning_user');
+            const localUserData = document.getElementById('localUserData');
+            if (localUser) {
+                const userData = JSON.parse(localUser);
+                localUserData.innerHTML = `<span class="status success">用户: ${userData.username}, 角色: ${userData.role}</span>`;
+                log(`本地用户数据: ${JSON.stringify(userData, null, 2)}`, 'success');
+            } else {
+                localUserData.innerHTML = `<span class="status error">无本地用户数据</span>`;
+                log('无本地用户数据', 'error');
+            }
+
+            // 检查服务器用户数据
+            try {
+                const apiUrl = await getApiUrl();
+                const response = await fetch(`${apiUrl}/api/auth/me`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const serverUserData = document.getElementById('serverUserData');
+                if (response.ok) {
+                    const data = await response.json();
+                    const user = data.user;
+                    serverUserData.innerHTML = `<span class="status success">用户: ${user.username}, 角色: ${user.role}</span>`;
+                    log(`服务器用户数据: ${JSON.stringify(user, null, 2)}`, 'success');
+                    
+                    // 更新当前角色显示
+                    const currentRole = document.getElementById('currentRole');
+                    currentRole.innerHTML = `<span class="status ${user.role === 'admin' ? 'success' : 'warning'}">${user.role}</span>`;
+                } else {
+                    serverUserData.innerHTML = `<span class="status error">服务器响应错误: ${response.status}</span>`;
+                    log(`服务器响应错误: ${response.status} ${response.statusText}`, 'error');
+                }
+            } catch (error) {
+                const serverUserData = document.getElementById('serverUserData');
+                serverUserData.innerHTML = `<span class="status error">连接服务器失败</span>`;
+                log(`连接服务器失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAdminLogin() {
+            log('开始测试admin登录...');
+            try {
+                const apiUrl = await getApiUrl();
+                const response = await fetch(`${apiUrl}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: 'admin',
+                        password: '123456'
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    log(`Admin登录成功: ${JSON.stringify(data.user, null, 2)}`, 'success');
+                    
+                    // 保存登录信息
+                    localStorage.setItem('auth_token', data.token);
+                    localStorage.setItem('learning_user', JSON.stringify(data.user));
+                    
+                    log('已保存登录信息到本地存储', 'success');
+                    
+                    // 重新检查状态
+                    await checkAuthStatus();
+                } else {
+                    log(`Admin登录失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                log(`Admin登录请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        function clearStorageData() {
+            log('清除本地存储数据...');
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('learning_user');
+            log('本地存储数据已清除', 'success');
+            
+            // 重置显示
+            document.getElementById('tokenStatus').innerHTML = '<span class="status error">不存在</span>';
+            document.getElementById('localUserData').innerHTML = '<span class="status error">无本地用户数据</span>';
+            document.getElementById('serverUserData').innerHTML = '<span class="status warning">未检查</span>';
+            document.getElementById('currentRole').innerHTML = '<span class="status warning">未知</span>';
+        }
+
+        function forceAdminRole() {
+            log('强制设置Admin角色...');
+            const localUser = localStorage.getItem('learning_user');
+            if (localUser) {
+                const userData = JSON.parse(localUser);
+                userData.role = 'admin';
+                localStorage.setItem('learning_user', JSON.stringify(userData));
+                log(`已强制设置角色为admin: ${JSON.stringify(userData, null, 2)}`, 'success');
+                checkAuthStatus();
+            } else {
+                log('无本地用户数据，无法强制设置角色', 'error');
+            }
+        }
+
+        async function syncUserData() {
+            log('开始同步用户数据...');
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                log('无Token，无法同步', 'error');
+                return;
+            }
+
+            try {
+                const apiUrl = await getApiUrl();
+                const response = await fetch(`${apiUrl}/api/auth/me`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem('learning_user', JSON.stringify(data.user));
+                    log(`用户数据同步成功: ${JSON.stringify(data.user, null, 2)}`, 'success');
+                    checkAuthStatus();
+                } else {
+                    log(`同步失败: ${response.status} ${response.statusText}`, 'error');
+                }
+            } catch (error) {
+                log(`同步请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function validateToken() {
+            log('验证Token有效性...');
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                log('无Token可验证', 'error');
+                return;
+            }
+
+            try {
+                const apiUrl = await getApiUrl();
+                const response = await fetch(`${apiUrl}/api/auth/me`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    log('Token验证成功，有效', 'success');
+                } else {
+                    log(`Token验证失败: ${response.status}`, 'error');
+                    if (response.status === 401 || response.status === 403) {
+                        log('Token已过期或无效，建议重新登录', 'error');
+                    }
+                }
+            } catch (error) {
+                log(`Token验证请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function refreshUserInfo() {
+            log('刷新用户信息...');
+            await syncUserData();
+            setTimeout(() => {
+                log('建议刷新页面以应用最新的用户信息', 'success');
+                if (confirm('是否现在刷新页面？')) {
+                    window.location.reload();
+                }
+            }, 1000);
+        }
+
+        // 页面加载时自动检查状态
+        window.onload = function() {
+            log('页面加载完成，开始自动检查...');
+            checkAuthStatus();
+        };
+    </script>
+</body>
+</html>

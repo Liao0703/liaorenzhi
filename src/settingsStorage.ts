@@ -4,6 +4,9 @@ export interface SystemSettings {
   defaultReadingTime: number; // 默认阅读时间（分钟）
   maxPhotos: number; // 最大照片存储数量
   enableFaceRecognition: boolean; // 是否启用人脸识别
+  enableRandomCapture: boolean; // 启用随机拍摄N张
+  randomCaptureCount: number; // 随机拍摄数量
+  enableAntiCheating: boolean; // 启用防代学功能（识别非本人时暂停学习）
 }
 
 // 默认设置
@@ -11,7 +14,10 @@ const defaultSettings: SystemSettings = {
   cameraInterval: 30,
   defaultReadingTime: 30,
   maxPhotos: 1000,
-  enableFaceRecognition: false
+  enableFaceRecognition: false,
+  enableRandomCapture: false,
+  randomCaptureCount: 3,
+  enableAntiCheating: false
 };
 
 // 从localStorage加载设置

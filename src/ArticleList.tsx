@@ -86,7 +86,7 @@ const ArticleList: React.FC<ArticleListProps> = ({ user: _user }) => {
     };
   }, []);
 
-  const categories = ['all', '安全规程', '设备维护', '应急处理', '信号系统', '调度规范', '服务标准'];
+  const categories = ['all', '安全规程', '设备维护', '应急处理', '信号系统', '调度规范', '作业标准'];
 
   const filteredArticles = selectedCategory === 'all' 
     ? articles 

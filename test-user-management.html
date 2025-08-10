@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+        }
+        button {
+            background: linear-gradient(90deg,#409eff 60%,#2b8cff 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            opacity: 0.8;
+        }
+        pre {
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 5px;
+            overflow: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background: rgba(255,255,255,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 用户管理功能测试</h1>
+        
+        <div class="test-section">
+            <h2>📋 获取用户列表</h2>
+            <button onclick="getUsers()">获取用户列表</button>
+            <pre id="users-result"></pre>
+            <div id="users-table"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>➕ 创建新用户</h2>
+            <button onclick="createTestUser()">创建测试用户</button>
+            <pre id="create-result"></pre>
+        </div>
+
+        <div class="test-section">
+            <h2>🔑 测试登录</h2>
+            <button onclick="testLogin()">测试维护员登录</button>
+            <pre id="login-result"></pre>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001/api';
+
+        async function getUsers() {
+            try {
+                const response = await fetch(`${API_BASE}/users`);
+                const data = await response.json();
+                document.getElementById('users-result').textContent = JSON.stringify(data, null, 2);
+                
+                if (data.success && data.data) {
+                    displayUsersTable(data.data);
+                }
+            } catch (error) {
+                document.getElementById('users-result').textContent = '错误: ' + error.message;
+            }
+        }
+
+        function displayUsersTable(users) {
+            const tableHtml = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>工号</th>
+                            <th>姓名</th>
+                            <th>电话</th>
+                            <th>单位</th>
+                            <th>部门</th>
+                            <th>班组</th>
+                            <th>工种</th>
+                            <th>角色</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${users.map(user => `
+                            <tr>
+                                <td>${user.employee_id || '-'}</td>
+                                <td>${user.full_name || user.name}</td>
+                                <td>${user.phone || '-'}</td>
+                                <td>${user.company || '兴隆村车站'}</td>
+                                <td>${user.department || '白市驿车站'}</td>
+                                <td>${user.team || '-'}</td>
+                                <td>${user.job_type || '-'}</td>
+                                <td>普通用户</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            document.getElementById('users-table').innerHTML = tableHtml;
+        }
+
+        async function createTestUser() {
+            const userData = {
+                username: 'test' + Date.now(),
+                password: '123456',
+                name: '测试用户',
+                full_name: '测试用户全名',
+                employee_id: '10003',
+                company: '兴隆村车站',
+                department: '白市驿车站',
+                team: '运转二班',
+                job_type: '助理值班员（外勤）',
+                email: 'test@example.com',
+                phone: '13800138888'
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/users`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(userData)
+                });
+                const data = await response.json();
+                document.getElementById('create-result').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('create-result').textContent = '错误: ' + error.message;
+            }
+        }
+
+        async function testLogin() {
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: 'maintenance',
+                        password: '123456'
+                    })
+                });
+                const data = await response.json();
+                document.getElementById('login-result').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('login-result').textContent = '错误: ' + error.message;
+            }
+        }
+
+        // 页面加载时自动获取用户列表
+        window.addEventListener('load', getUsers);
+    </script>
+</body>
+</html>

@@ -75,34 +75,7 @@ const ServerStoragePanel: React.FC<ServerStoragePanelProps> = ({ onClose }) => {
     }
   };
 
-  // 导出文件列表
-  const handleExportList = () => {
-    try {
-      const exportData = {
-        files: files,
-        totalFiles: files.length,
-        totalSize: totalSize,
-        exportTime: new Date().toISOString(),
-        storageConfig: STORAGE_CONFIG
-      };
-      
-      const dataStr = JSON.stringify(exportData, null, 2);
-      const dataBlob = new Blob([dataStr], {type: 'application/json'});
-      const url = URL.createObjectURL(dataBlob);
-      
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `server-files-${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      
-      alert('文件列表导出成功');
-    } catch (error) {
-      alert(`导出失败: ${error instanceof Error ? error.message : '未知错误'}`);
-    }
-  };
+
 
   return (
     <div style={{
@@ -182,20 +155,7 @@ const ServerStoragePanel: React.FC<ServerStoragePanelProps> = ({ onClose }) => {
             {isLoading ? '刷新中...' : '🔄 刷新列表'}
           </button>
           
-          <button
-            onClick={handleExportList}
-            style={{
-              padding: '10px 20px',
-              background: 'linear-gradient(90deg,#f59e0b 60%,#d97706 100%)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '14px'
-            }}
-          >
-            📦 导出列表
-          </button>
+
           
           <button
             onClick={onClose}

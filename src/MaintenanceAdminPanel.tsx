@@ -19,7 +19,7 @@ if (typeof document !== 'undefined') {
 }
 
 // 动态导入组件，避免路径问题
-const LearningRecordManagement = React.lazy(() => import('./components/LearningRecordManagement'));
+const UserManagement = React.lazy(() => import('./components/UserManagement'));
 const MaintenancePanel = React.lazy(() => import('./MaintenancePanel'));
 
 interface MaintenanceAdminPanelProps {
@@ -28,7 +28,7 @@ interface MaintenanceAdminPanelProps {
 }
 
 const MaintenanceAdminPanel: React.FC<MaintenanceAdminPanelProps> = ({ user, onLogout }) => {
-  const [activeTab, setActiveTab] = useState<'records' | 'maintenance'>('records');
+  const [activeTab, setActiveTab] = useState<'users' | 'maintenance'>('users');
 
   // 权限检查
   if (!user || (user.role !== 'maintenance' && user.role !== 'admin')) {
@@ -132,10 +132,10 @@ const MaintenanceAdminPanel: React.FC<MaintenanceAdminPanelProps> = ({ user, onL
           justifyContent: 'center'
         }}>
           <button
-            onClick={() => setActiveTab('records')}
+            onClick={() => setActiveTab('users')}
             style={{
               padding: '15px 30px',
-              background: activeTab === 'records' 
+              background: activeTab === 'users' 
                 ? 'linear-gradient(90deg, #409eff 60%, #2b8cff 100%)' 
                 : 'rgba(255, 255, 255, 0.1)',
               color: '#fff',
@@ -150,11 +150,11 @@ const MaintenanceAdminPanel: React.FC<MaintenanceAdminPanelProps> = ({ user, onL
               transition: 'all 0.3s ease',
               minWidth: '140px',
               justifyContent: 'center',
-              boxShadow: activeTab === 'records' ? '0 4px 15px rgba(64, 158, 255, 0.3)' : 'none',
-              transform: activeTab === 'records' ? 'translateY(-2px)' : 'none'
+              boxShadow: activeTab === 'users' ? '0 4px 15px rgba(64, 158, 255, 0.3)' : 'none',
+              transform: activeTab === 'users' ? 'translateY(-2px)' : 'none'
             }}
           >
-            📊 学习记录
+            👥 用户管理
           </button>
           <button
             onClick={() => setActiveTab('maintenance')}
@@ -194,7 +194,7 @@ const MaintenanceAdminPanel: React.FC<MaintenanceAdminPanelProps> = ({ user, onL
           marginTop: '10px',
           lineHeight: '1.6'
         }}>
-          {activeTab === 'records' && (
+          {activeTab === 'users' && (
             <div>
               <div style={{ 
                 display: 'flex', 
@@ -204,18 +204,18 @@ const MaintenanceAdminPanel: React.FC<MaintenanceAdminPanelProps> = ({ user, onL
                 fontSize: '16px',
                 fontWeight: 'bold'
               }}>
-                📊 学习记录功能
+                👥 用户管理功能
               </div>
               <ul style={{ 
                 margin: '0', 
                 paddingLeft: '20px',
                 listStyleType: 'disc'
               }}>
-                <li style={{ marginBottom: '8px' }}>查看和统计用户学习记录</li>
-                <li style={{ marginBottom: '8px' }}>监控学习进度和测验成绩</li>
-                <li style={{ marginBottom: '8px' }}>按部门、班组、时间筛选记录</li>
-                <li style={{ marginBottom: '8px' }}>导出学习数据报告</li>
-                <li style={{ marginBottom: '8px' }}>学习效果分析和统计</li>
+                <li style={{ marginBottom: '8px' }}>添加、编辑、删除用户账户</li>
+                <li style={{ marginBottom: '8px' }}>设置用户权限和角色</li>
+                <li style={{ marginBottom: '8px' }}>管理用户基本信息</li>
+                <li style={{ marginBottom: '8px' }}>按部门、班组筛选用户</li>
+                <li style={{ marginBottom: '8px' }}>重置用户密码</li>
               </ul>
             </div>
           )}
@@ -278,7 +278,7 @@ const MaintenanceAdminPanel: React.FC<MaintenanceAdminPanelProps> = ({ user, onL
             <div style={{ fontSize: '16px', fontWeight: '500' }}>加载中...</div>
           </div>
         }>
-          {activeTab === 'records' && (
+          {activeTab === 'users' && (
             <div style={{
               background: 'rgba(255, 255, 255, 0.05)',
               borderRadius: '12px',
@@ -286,7 +286,7 @@ const MaintenanceAdminPanel: React.FC<MaintenanceAdminPanelProps> = ({ user, onL
               border: '1px solid rgba(255, 255, 255, 0.1)',
               overflow: 'hidden'
             }}>
-              <LearningRecordManagement currentUser={user} />
+              <UserManagement currentUser={user} />
             </div>
           )}
           {activeTab === 'maintenance' && (

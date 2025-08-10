@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { authAPI } from './config/api';
+import LeaderBoard from './components/LeaderBoard';
 
 interface LoginProps {
   onLoginSuccess: (user: any) => void;
@@ -16,12 +18,22 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
     try {
       const data = await authAPI.login(username, password);
+      
+      console.log('登录响应:', data);
+
+      // 检查响应是否成功
+      if (data.success === false) {
+        setError(data.error || '登录失败');
+        return;
+      }
 
       // 保存token到localStorage
       if (data.token) {
         localStorage.setItem('auth_token', data.token);
+        onLoginSuccess(data.user);
+      } else {
+        setError('登录响应无效');
       }
-      onLoginSuccess(data.user);
     } catch (error: any) {
       console.error('登录请求错误:', error);
       setError(error.message || '网络错误，请重试');
@@ -29,7 +41,9 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <form className="login-form-bg" onSubmit={handleLogin}>
+    <>
+      <LeaderBoard position="login" />
+      <form className="login-form-bg" onSubmit={handleLogin}>
       <h2>班前学习监督系统</h2>
       <input
         type="text"
@@ -92,6 +106,41 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       >
         登录
       </button>
+      
+      {/* 忘记密码和注册链接 */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        marginBottom: 20,
+        fontSize: 14
+      }}>
+        <Link 
+          to="/forgot-password"
+          style={{ 
+            color: '#fff9', 
+            textDecoration: 'none',
+            transition: 'color 0.3s ease'
+          }}
+          onMouseEnter={(e) => e.target.style.color = '#fff'}
+          onMouseLeave={(e) => e.target.style.color = '#fff9'}
+        >
+          忘记密码？
+        </Link>
+        <Link 
+          to="/register"
+          style={{ 
+            color: '#fff9', 
+            textDecoration: 'none',
+            transition: 'color 0.3s ease'
+          }}
+          onMouseEnter={(e) => e.target.style.color = '#fff'}
+          onMouseLeave={(e) => e.target.style.color = '#fff9'}
+        >
+          注册账户
+        </Link>
+      </div>
+      
       <div style={{ color: '#fff8', fontSize: 12, textAlign: 'center', marginTop: 8 }}>
         <div style={{ fontSize: 10, opacity: 0.7, marginTop: 8, padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)' }}>
           <div style={{ marginBottom: 4, fontWeight: 'bold', color: '#ff9800' }}>🔑 测试账号（统一密码）</div>
@@ -103,6 +152,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         </div>
       </div>
     </form>
+    </>
   );
 };
 

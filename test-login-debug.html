@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录调试测试</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 20px; 
+        }
+        .section { 
+            margin: 20px 0; 
+            padding: 15px; 
+            border: 1px solid #ddd; 
+            border-radius: 5px; 
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button { 
+            padding: 10px 15px; 
+            margin: 5px; 
+            border: none; 
+            border-radius: 3px; 
+            cursor: pointer; 
+        }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-success { background-color: #28a745; color: white; }
+        .btn-warning { background-color: #ffc107; color: black; }
+        pre { 
+            background-color: #f8f9fa; 
+            padding: 10px; 
+            border-radius: 3px; 
+            overflow-x: auto; 
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 登录问题诊断工具</h1>
+    
+    <div class="section info">
+        <h3>当前环境信息</h3>
+        <p><strong>当前域名:</strong> <span id="hostname"></span></p>
+        <p><strong>API基础URL:</strong> <span id="apiBaseUrl"></span></p>
+        <p><strong>时间:</strong> <span id="currentTime"></span></p>
+    </div>
+
+    <div class="section">
+        <h3>1. 服务器连通性测试</h3>
+        <button class="btn-primary" onclick="testServerHealth()">测试服务器健康状态</button>
+        <div id="healthResult"></div>
+    </div>
+
+    <div class="section">
+        <h3>2. CORS配置测试</h3>
+        <button class="btn-primary" onclick="testCORS()">测试CORS配置</button>
+        <div id="corsResult"></div>
+    </div>
+
+    <div class="section">
+        <h3>3. 登录接口测试</h3>
+        <div>
+            <label>用户名: <input type="text" id="username" value="admin" placeholder="admin"></label><br><br>
+            <label>密码: <input type="password" id="password" value="123456" placeholder="123456"></label><br><br>
+            <button class="btn-success" onclick="testLogin()">测试登录</button>
+        </div>
+        <div id="loginResult"></div>
+    </div>
+
+    <div class="section">
+        <h3>4. 网络请求详情</h3>
+        <button class="btn-warning" onclick="testDetailedLogin()">详细登录测试</button>
+        <div id="detailedResult"></div>
+    </div>
+
+    <script>
+        // 获取API基础URL的函数
+        function getApiBaseUrl() {
+            const hostname = window.location.hostname;
+            
+            if (hostname === '116.62.65.246' || 
+                hostname === 'www.liaorenzhi.top' || 
+                hostname === 'liaorenzhi.top' ||
+                hostname.includes('vercel.app')) {
+                return 'http://116.62.65.246:3001/api';
+            }
+            return 'http://localhost:3001/api';
+        }
+
+        // 初始化页面信息
+        document.getElementById('hostname').textContent = window.location.hostname;
+        document.getElementById('apiBaseUrl').textContent = getApiBaseUrl();
+        document.getElementById('currentTime').textContent = new Date().toLocaleString();
+
+        // 测试服务器健康状态
+        async function testServerHealth() {
+            const resultDiv = document.getElementById('healthResult');
+            resultDiv.innerHTML = '<p>正在测试...</p>';
+            
+            try {
+                const apiBase = getApiBaseUrl();
+                const response = await fetch(`${apiBase.replace('/api', '')}/health`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✅ 服务器连接成功</h4>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>❌ 服务器响应异常</h4>
+                            <p>状态码: ${response.status}</p>
+                            <p>状态文本: ${response.statusText}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ 服务器连接失败</h4>
+                        <p>错误信息: ${error.message}</p>
+                        <p>这可能是因为:</p>
+                        <ul>
+                            <li>服务器未启动</li>
+                            <li>端口不通</li>
+                            <li>防火墙阻止</li>
+                            <li>内网穿透配置问题</li>
+                        </ul>
+                    </div>
+                `;
+            }
+        }
+
+        // 测试CORS配置
+        async function testCORS() {
+            const resultDiv = document.getElementById('corsResult');
+            resultDiv.innerHTML = '<p>正在测试CORS...</p>';
+            
+            try {
+                const apiBase = getApiBaseUrl();
+                const response = await fetch(`${apiBase}/cors-test`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Origin': window.location.origin
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✅ CORS配置正常</h4>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>❌ CORS配置异常</h4>
+                            <p>状态码: ${response.status}</p>
+                            <p>当前源: ${window.location.origin}</p>
+                            <p>需要在服务器CORS配置中添加此域名</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ CORS测试失败</h4>
+                        <p>错误信息: ${error.message}</p>
+                        <p>当前源: ${window.location.origin}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // 简单登录测试
+        async function testLogin() {
+            const resultDiv = document.getElementById('loginResult');
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            resultDiv.innerHTML = '<p>正在测试登录...</p>';
+            
+            try {
+                const apiBase = getApiBaseUrl();
+                const response = await fetch(`${apiBase}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✅ 登录成功!</h4>
+                            <p>用户: ${data.user.name} (${data.user.role})</p>
+                            <p>Token已获取</p>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <h4>❌ 登录失败</h4>
+                            <p>错误信息: ${data.error || data.message}</p>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ 登录请求失败</h4>
+                        <p>错误信息: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // 详细登录测试
+        async function testDetailedLogin() {
+            const resultDiv = document.getElementById('detailedResult');
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            resultDiv.innerHTML = '<p>正在进行详细测试...</p>';
+            
+            const apiBase = getApiBaseUrl();
+            const url = `${apiBase}/auth/login`;
+            
+            try {
+                console.log('开始登录请求...');
+                console.log('URL:', url);
+                console.log('用户名:', username);
+                
+                const startTime = Date.now();
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const endTime = Date.now();
+                const responseTime = endTime - startTime;
+                
+                console.log('响应状态:', response.status);
+                console.log('响应头:', [...response.headers.entries()]);
+                
+                const responseText = await response.text();
+                console.log('响应内容:', responseText);
+                
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (e) {
+                    data = { raw: responseText };
+                }
+                
+                resultDiv.innerHTML = `
+                    <div class="${response.ok ? 'success' : 'error'}">
+                        <h4>请求详情</h4>
+                        <p><strong>请求URL:</strong> ${url}</p>
+                        <p><strong>响应时间:</strong> ${responseTime}ms</p>
+                        <p><strong>状态码:</strong> ${response.status}</p>
+                        <p><strong>状态文本:</strong> ${response.statusText}</p>
+                        <h5>响应头:</h5>
+                        <pre>${JSON.stringify([...response.headers.entries()], null, 2)}</pre>
+                        <h5>响应数据:</h5>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('请求失败:', error);
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h4>❌ 请求异常</h4>
+                        <p><strong>错误类型:</strong> ${error.name}</p>
+                        <p><strong>错误信息:</strong> ${error.message}</p>
+                        <p><strong>请求URL:</strong> ${url}</p>
+                        <h5>可能的原因:</h5>
+                        <ul>
+                            <li>网络连接问题</li>
+                            <li>服务器未启动</li>
+                            <li>端口被阻止</li>
+                            <li>CORS阻止</li>
+                            <li>内网穿透配置错误</li>
+                        </ul>
+                    </div>
+                `;
+            }
+        }
+
+        // 自动运行基础测试
+        setTimeout(() => {
+            testServerHealth();
+        }, 1000);
+    </script>
+</body>
+</html>

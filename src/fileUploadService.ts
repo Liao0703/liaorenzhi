@@ -32,8 +32,18 @@ export const getFileType = (fileType: string): string => {
   return SUPPORTED_FILE_TYPES[fileType as keyof typeof SUPPORTED_FILE_TYPES] || 'unknown';
 };
 
-// 云服务器配置 
-const CLOUD_SERVER_URL = window.location.origin; // 使用当前域名
+// 云服务器配置：在生产环境统一走独立的 API 域名，避免混合内容
+const CLOUD_SERVER_URL = (() => {
+  const hostname = window.location.hostname;
+  if (
+    hostname === 'www.liaorenzhi.top' ||
+    hostname === 'liaorenzhi.top' ||
+    hostname.includes('vercel.app')
+  ) {
+    return 'https://api.liaorenzhi.top';
+  }
+  return window.location.origin;
+})();
 const FILE_API_BASE = `${CLOUD_SERVER_URL}/api/files`;
 
 // 统一文件上传到云服务器

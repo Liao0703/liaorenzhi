@@ -11,7 +11,7 @@ export DB_HOST=localhost
 export DB_USER=root
 export DB_PASSWORD=""
 export DB_NAME=learning_platform
-export CORS_ORIGIN="http://localhost:3000,http://localhost:5173,http://116.62.65.246:3000"
+export CORS_ORIGIN="http://localhost:3000,http://localhost:5173,http://localhost:5175,http://116.62.65.246:3000"
 
 # 进入服务器目录
 cd server

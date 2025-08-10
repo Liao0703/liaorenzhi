@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin角色修复成功</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            max-width: 600px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 40px;
+            backdrop-filter: blur(10px);
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        .success-icon {
+            font-size: 80px;
+            color: #4CAF50;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #fff;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+        .problem-box, .solution-box {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .problem-box {
+            border-left: 4px solid #f44336;
+        }
+        .solution-box {
+            border-left: 4px solid #4CAF50;
+        }
+        .code {
+            background: #000;
+            color: #0f0;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+        }
+        .btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .btn:hover {
+            background: #45a049;
+        }
+        .btn-primary {
+            background: #2196F3;
+        }
+        .btn-primary:hover {
+            background: #1976D2;
+        }
+        .step {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 3px solid #FFC107;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success-icon">✅</div>
+        <h1>Admin角色修复成功！</h1>
+        
+        <div class="problem-box">
+            <h3>🔍 问题原因</h3>
+            <p>数据库中admin用户的角色被错误设置为 <code>user</code>，导致登录后显示普通用户功能。</p>
+            <div class="code">
+                ID: 1, 用户名: admin, 姓名: 赵六, 角色: user ❌
+            </div>
+        </div>
+
+        <div class="solution-box">
+            <h3>🛠️ 修复方案</h3>
+            <p>已将admin用户的角色正确设置为 <code>admin</code></p>
+            <div class="code">
+                ID: 1, 用户名: admin, 姓名: 赵六, 角色: admin ✅
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>📋 下一步操作</h3>
+            <p><strong>1. 清除浏览器缓存</strong></p>
+            <p>打开浏览器开发者工具(F12) → Application → Storage → Clear site data</p>
+            
+            <p><strong>2. 重新登录</strong></p>
+            <p>使用 admin / 123456 重新登录</p>
+            
+            <p><strong>3. 验证功能</strong></p>
+            <p>登录后应该看到：</p>
+            <ul>
+                <li>角色显示：系统管理员</li>
+                <li>管理后台 (admin) 按钮</li>
+                <li>完整的管理功能</li>
+            </ul>
+        </div>
+
+        <div style="margin-top: 30px;">
+            <button class="btn" onclick="clearStorage()">🗑️ 清除浏览器缓存</button>
+            <button class="btn btn-primary" onclick="goToLogin()">🔑 前往登录页</button>
+        </div>
+
+        <div style="margin-top: 20px; font-size: 14px; opacity: 0.8;">
+            <p>💡 提示：如果问题仍然存在，请刷新页面并重新登录</p>
+        </div>
+    </div>
+
+    <script>
+        function clearStorage() {
+            // 清除本地存储
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('learning_user');
+            
+            // 清除会话存储
+            sessionStorage.clear();
+            
+            alert('✅ 浏览器缓存已清除！现在可以重新登录了。');
+        }
+
+        function goToLogin() {
+            // 先清除缓存
+            clearStorage();
+            
+            // 跳转到登录页
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 500);
+        }
+
+        // 页面加载时显示成功消息
+        window.onload = function() {
+            console.log('✅ Admin角色修复完成');
+            console.log('🔧 数据库中admin用户的角色已从 user 修复为 admin');
+            console.log('🔄 请清除浏览器缓存并重新登录');
+        };
+    </script>
+</body>
+</html>

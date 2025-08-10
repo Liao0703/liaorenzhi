@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>编辑用户 - 班前学习监督系统</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    }
+    
+    #loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      z-index: 9999;
+    }
+    
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top: 3px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 15px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    #root {
+      min-height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">
+    <div class="loading-spinner"></div>
+    <div>正在加载编辑用户窗口...</div>
+  </div>
+  <div id="root"></div>
+
+  <script type="module">
+    // 动态导入React和相关依赖
+    import React from 'https://esm.sh/react@18';
+    import ReactDOM from 'https://esm.sh/react-dom@18/client';
+
+    // 简化的API客户端
+    const API_BASE_URL = window.location.hostname === 'localhost' 
+      ? 'http://localhost:3001/api' 
+      : 'http://116.62.65.246:3001/api';
+
+    const apiClient = {
+      async request(endpoint, options = {}) {
+        const url = `${API_BASE_URL}${endpoint}`;
+        const defaultHeaders = {
+          'Content-Type': 'application/json',
+        };
+
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+          defaultHeaders['Authorization'] = `Bearer ${token}`;
+        }
+
+        const config = {
+          ...options,
+          headers: {
+            ...defaultHeaders,
+            ...options.headers,
+          },
+        };
+
+        try {
+          const response = await fetch(url, config);
+          if (!response.ok) {
+            throw new Error(`HTTP错误: ${response.status}`);
+          }
+          return await response.json();
+        } catch (error) {
+          throw error;
+        }
+      },
+
+      async put(endpoint, data) {
+        return this.request(endpoint, {
+          method: 'PUT',
+          body: JSON.stringify(data),
+        });
+      },
+
+      async get(endpoint) {
+        return this.request(endpoint, {
+          method: 'GET',
+        });
+      }
+    };
+
+    // 用户API
+    const userAPI = {
+      update: (userId, userData) => apiClient.put(`/users/${userId}`, userData),
+      getById: (userId) => apiClient.get(`/users/${userId}`)
+    };
+
+    // 从URL参数获取用户数据
+    const getURLParams = () => {
+      const params = new URLSearchParams(window.location.search);
+      const userData = {};
+      
+      // 解析所有URL参数
+      for (const [key, value] of params.entries()) {
+        if (value) {
+          userData[key] = decodeURIComponent(value);
+        }
+      }
+      
+      return userData;
+    };
+
+    // EditUserWindow组件
+    const EditUserWindow = () => {
+      const [loading, setLoading] = React.useState(false);
+      const [message, setMessage] = React.useState(null);
+      const [initialLoading, setInitialLoading] = React.useState(true);
+      
+      // 获取URL参数中的用户数据
+      const urlParams = getURLParams();
+      
+      const [formData, setFormData] = React.useState({
+        username: urlParams.username || '',
+        password: '', // 编辑时密码留空表示不修改
+        name: urlParams.name || '',
+        full_name: urlParams.full_name || '',
+        employee_id: urlParams.employee_id || '',
+        department: urlParams.department || '白市驿车站',
+        team: urlParams.team || '运转一班',
+        job_type: urlParams.job_type || '车站值班员',
+        company: urlParams.company || '兴隆村车站',
+        email: urlParams.email || '',
+        phone: urlParams.phone || ''
+      });
+
+      const teams = ['运转一班', '运转二班', '运转三班', '运转四班'];
+      const jobTypes = ['车站值班员', '助理值班员（内勤）', '助理值班员（外勤）', '连结员', '调车长', '列尾作业员', '站调', '车号员'];
+
+      const userId = urlParams.id;
+
+      React.useEffect(() => {
+        // 模拟加载延迟
+        setTimeout(() => {
+          setInitialLoading(false);
+        }, 500);
+      }, []);
+
+      const handleSave = async () => {
+        if (!formData.username) {
+          setMessage({ type: 'error', text: '用户名不能为空' });
+          return;
+        }
+
+        if (!userId) {
+          setMessage({ type: 'error', text: '缺少用户ID信息' });
+          return;
+        }
+
+        setLoading(true);
+        setMessage(null);
+
+        try {
+          await userAPI.update(userId, formData);
+          setMessage({ type: 'success', text: '用户更新成功！' });
+          
+          // 通知父窗口刷新用户列表
+          if (window.opener && !window.opener.closed) {
+            try {
+              // 尝试调用父窗口的刷新函数
+              if (window.opener.refreshUserList) {
+                window.opener.refreshUserList();
+              }
+            } catch (e) {
+              console.log('无法调用父窗口刷新函数:', e);
+            }
+          }
+
+          setTimeout(() => {
+            setMessage({ 
+              type: 'success', 
+              text: '用户更新成功！您可以关闭此窗口返回用户管理页面。刷新页面即可看到更新后的数据。' 
+            });
+          }, 1000);
+
+        } catch (error) {
+          setMessage({ 
+            type: 'error', 
+            text: error.response?.data?.message || error.message || '更新用户失败，请重试' 
+          });
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      const handleClose = () => {
+        if (window.confirm('确定要关闭窗口吗？未保存的数据将丢失。')) {
+          window.close();
+        }
+      };
+
+      const inputStyle = {
+        width: '100%',
+        padding: '15px 18px',
+        borderRadius: '10px',
+        border: '1px solid rgba(255, 255, 255, 0.3)',
+        background: 'rgba(255, 255, 255, 0.15)',
+        color: '#fff',
+        fontSize: '16px',
+        outline: 'none',
+        transition: 'all 0.3s ease',
+        boxSizing: 'border-box'
+      };
+
+      const selectStyle = {
+        ...inputStyle,
+        cursor: 'pointer',
+        background: 'rgba(255, 255, 255, 0.15)'
+      };
+
+      const labelStyle = {
+        display: 'block',
+        marginBottom: '10px',
+        fontSize: '14px',
+        color: '#fff',
+        fontWeight: '600'
+      };
+
+      if (initialLoading) {
+        return null; // 显示loading页面
+      }
+
+      return React.createElement('div', {
+        style: {
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          minHeight: '100vh',
+          padding: '20px',
+          fontFamily: 'Arial, sans-serif'
+        }
+      }, [
+        // 顶部标题栏
+        React.createElement('div', {
+          key: 'header',
+          style: {
+            background: 'rgba(255, 255, 255, 0.15)',
+            borderRadius: '12px',
+            padding: '20px 30px',
+            marginBottom: '25px',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            color: '#fff',
+            border: '1px solid rgba(255, 255, 255, 0.2)'
+          }
+        }, [
+          React.createElement('div', { key: 'title' }, [
+            React.createElement('h1', {
+              key: 'h1',
+              style: {
+                margin: 0,
+                fontSize: '26px',
+                fontWeight: 'bold',
+                textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                letterSpacing: '1px'
+              }
+            }, '✏️ 编辑用户'),
+            React.createElement('p', {
+              key: 'p',
+              style: {
+                margin: '8px 0 0 0',
+                opacity: 0.9,
+                fontSize: '14px'
+              }
+            }, `编辑用户: ${formData.name || formData.username}`)
+          ]),
+          React.createElement('button', {
+            key: 'closeBtn',
+            onClick: handleClose,
+            style: {
+              padding: '10px 20px',
+              background: 'rgba(255, 71, 87, 0.8)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }
+          }, '✕ 关闭窗口')
+        ]),
+
+        // 消息提示
+        message && React.createElement('div', {
+          key: 'message',
+          style: {
+            background: message.type === 'success' 
+              ? 'rgba(46, 204, 113, 0.9)' 
+              : 'rgba(231, 76, 60, 0.9)',
+            color: '#fff',
+            padding: '15px 20px',
+            borderRadius: '8px',
+            marginBottom: '20px',
+            fontSize: '14px',
+            fontWeight: '500',
+            textAlign: 'center',
+            backdropFilter: 'blur(10px)',
+            boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)'
+          }
+        }, message.text),
+
+        // 表单内容
+        React.createElement('div', {
+          key: 'form',
+          style: {
+            background: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(20px)',
+            padding: '40px',
+            borderRadius: '20px',
+            color: '#fff',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)'
+          }
+        }, [
+          React.createElement('div', {
+            key: 'fields',
+            style: {
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+              gap: '25px',
+              marginBottom: '30px'
+            }
+          }, [
+            // 用户名 (只读)
+            React.createElement('div', { key: 'username' }, [
+              React.createElement('label', { key: 'label', style: labelStyle }, '用户名 (不可修改)'),
+              React.createElement('input', {
+                key: 'input',
+                type: 'text',
+                value: formData.username,
+                readOnly: true,
+                style: {
+                  ...inputStyle,
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  opacity: 0.7,
+                  cursor: 'not-allowed'
+                },
+                placeholder: '用户名'
+              })
+            ]),
+
+            // 新密码
+            React.createElement('div', { key: 'password' }, [
+              React.createElement('label', { key: 'label', style: labelStyle }, '新密码 (留空不修改)'),
+              React.createElement('input', {
+                key: 'input',
+                type: 'password',
+                value: formData.password,
+                onChange: (e) => setFormData({...formData, password: e.target.value}),
+                style: inputStyle,
+                placeholder: '留空表示不修改密码'
+              })
+            ]),
+
+            // 姓名
+            React.createElement('div', { key: 'name' }, [
+              React.createElement('label', { key: 'label', style: labelStyle }, '姓名'),
+              React.createElement('input', {
+                key: 'input',
+                type: 'text',
+                value: formData.name,
+                onChange: (e) => setFormData({...formData, name: e.target.value}),
+                style: inputStyle,
+                placeholder: '请输入姓名'
+              })
+            ]),
+
+            // 全名
+            React.createElement('div', { key: 'full_name' }, [
+              React.createElement('label', { key: 'label', style: labelStyle }, '全名'),
+              React.createElement('input', {
+                key: 'input',
+                type: 'text',
+                value: formData.full_name,
+                onChange: (e) => setFormData({...formData, full_name: e.target.value}),
+                style: inputStyle,
+                placeholder: '请输入全名'
+              })
+            ]),
+
+            // 工号
+            React.createElement('div', { key: 'employee_id' }, [
+              React.createElement('label', { key: 'label', style: labelStyle }, '工号'),
+              React.createElement('input', {
+                key: 'input',
+                type: 'text',
+                value: formData.employee_id,
+                onChange: (e) => setFormData({...formData, employee_id: e.target.value}),
+                style: inputStyle,
+                placeholder: '请输入工号',
+                maxLength: 5
+              })
+            ]),
+
+            // 部门 (只读)
+            React.createElement('div', { key: 'department' }, [
+              React.createElement('label', { key: 'label', style: labelStyle }, '部门'),
+              React.createElement('input', {
+                key: 'input',
+                type: 'text',
+                value: '白市驿车站',
+                readOnly: true,
+                style: {
+                  ...inputStyle,
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  opacity: 0.7,
+                  cursor: 'not-allowed'
+                }
+              })
+            ]),
+
+            // 班组
+            React.createElement('div', { key: 'team' }, [
+              React.createElement('label', { key: 'label', style: labelStyle }, '班组'),
+              React.createElement('select', {
+                key: 'select',
+                value: formData.team,
+                onChange: (e) => setFormData({...formData, team: e.target.value}),
+                style: selectStyle
+              }, teams.map(team => 
+                React.createElement('option', { 
+                  key: team, 
+                  value: team,
+                  style: { background: '#2c3e50', color: '#fff' }
+                }, team)
+              ))
+            ]),
+
+            // 工种
+            React.createElement('div', { key: 'job_type' }, [
+              React.createElement('label', { key: 'label', style: labelStyle }, '工种'),
+              React.createElement('select', {
+                key: 'select',
+                value: formData.job_type,
+                onChange: (e) => setFormData({...formData, job_type: e.target.value}),
+                style: selectStyle
+              }, jobTypes.map(jobType => 
+                React.createElement('option', { 
+                  key: jobType, 
+                  value: jobType,
+                  style: { background: '#2c3e50', color: '#fff' }
+                }, jobType)
+              ))
+            ]),
+
+            // 单位 (只读)
+            React.createElement('div', { key: 'company' }, [
+              React.createElement('label', { key: 'label', style: labelStyle }, '单位'),
+              React.createElement('input', {
+                key: 'input',
+                type: 'text',
+                value: '兴隆村车站',
+                readOnly: true,
+                style: {
+                  ...inputStyle,
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  opacity: 0.7,
+                  cursor: 'not-allowed'
+                }
+              })
+            ]),
+
+            // 邮箱
+            React.createElement('div', { key: 'email' }, [
+              React.createElement('label', { key: 'label', style: labelStyle }, '邮箱'),
+              React.createElement('input', {
+                key: 'input',
+                type: 'email',
+                value: formData.email,
+                onChange: (e) => setFormData({...formData, email: e.target.value}),
+                style: inputStyle,
+                placeholder: '请输入邮箱'
+              })
+            ]),
+
+            // 手机号
+            React.createElement('div', { key: 'phone' }, [
+              React.createElement('label', { key: 'label', style: labelStyle }, '手机号'),
+              React.createElement('input', {
+                key: 'input',
+                type: 'tel',
+                value: formData.phone,
+                onChange: (e) => setFormData({...formData, phone: e.target.value}),
+                style: inputStyle,
+                placeholder: '请输入手机号'
+              })
+            ])
+          ]),
+
+          // 操作按钮
+          React.createElement('div', {
+            key: 'buttons',
+            style: {
+              display: 'flex',
+              gap: '20px',
+              justifyContent: 'center',
+              flexWrap: 'wrap',
+              paddingTop: '20px',
+              borderTop: '1px solid rgba(255, 255, 255, 0.2)'
+            }
+          }, [
+            React.createElement('button', {
+              key: 'cancel',
+              onClick: handleClose,
+              style: {
+                padding: '15px 30px',
+                background: 'rgba(255,255,255,0.15)',
+                color: '#fff',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                borderRadius: '30px',
+                cursor: 'pointer',
+                fontSize: '16px',
+                fontWeight: '500'
+              }
+            }, '❌ 取消'),
+
+            React.createElement('button', {
+              key: 'save',
+              onClick: handleSave,
+              disabled: loading || !formData.username,
+              style: {
+                padding: '15px 40px',
+                background: loading || !formData.username
+                  ? 'rgba(255,255,255,0.3)'
+                  : 'linear-gradient(90deg,#409eff 60%,#2b8cff 100%)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '30px',
+                cursor: loading || !formData.username ? 'not-allowed' : 'pointer',
+                fontSize: '16px',
+                fontWeight: '600'
+              }
+            }, loading ? '⏳ 更新中...' : '✅ 保存修改')
+          ])
+        ])
+      ]);
+    };
+
+    // 隐藏加载页面并渲染组件
+    setTimeout(() => {
+      document.getElementById('loading').style.display = 'none';
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(React.createElement(EditUserWindow));
+    }, 500);
+  </script>
+</body>
+</html>

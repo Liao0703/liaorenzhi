@@ -122,39 +122,92 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({ show, onClose, onFile
   if (!show) return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      width: '100vw',
-      height: '100vh',
-      background: 'rgba(0,0,0,0.8)',
-      zIndex: 10000,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px'
-    }}>
-      <div style={{
-        background: '#222',
-        padding: '30px',
-        borderRadius: '16px',
-        maxWidth: 600,
-        width: '100%',
-        maxHeight: '90vh',
-        overflowY: 'auto',
-        color: '#fff'
-      }}>
-        <h2 style={{ margin: '0 0 20px 0', textAlign: 'center' }}>📄 上传文件到OSS</h2>
+    <div 
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        background: 'rgba(0,0,0,0.8)',
+        zIndex: 10000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px',
+        backdropFilter: 'blur(10px)'
+      }}
+      onClick={(e) => {
+        // 点击遮罩层关闭模态框
+        if (e.target === e.currentTarget && !isUploading) {
+          onClose();
+        }
+      }}
+    >
+      <div 
+        style={{
+          background: '#222',
+          padding: '20px',
+          borderRadius: '16px',
+          maxWidth: 550,
+          width: '100%',
+          maxHeight: '85vh',
+          overflowY: 'auto',
+          color: '#fff',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+          position: 'relative',
+          border: '1px solid rgba(255,255,255,0.1)'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* 标题栏和关闭按钮 */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginBottom: '20px',
+          paddingBottom: '15px',
+          borderBottom: '1px solid rgba(255,255,255,0.1)'
+        }}>
+          <h2 style={{ margin: 0, fontSize: '18px' }}>📄 上传文件</h2>
+          <button
+            onClick={onClose}
+            disabled={isUploading}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#fff',
+              fontSize: '24px',
+              cursor: isUploading ? 'not-allowed' : 'pointer',
+              padding: '5px',
+              borderRadius: '4px',
+              opacity: isUploading ? 0.5 : 0.7,
+              transition: 'opacity 0.3s ease'
+            }}
+            onMouseOver={(e) => !isUploading && (e.currentTarget.style.opacity = '1')}
+            onMouseOut={(e) => !isUploading && (e.currentTarget.style.opacity = '0.7')}
+            title="关闭"
+          >
+            ✕
+          </button>
+        </div>
         
+        {/* 文件类型说明 - 可折叠 */}
         <div style={{ marginBottom: '20px' }}>
-          <h3 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>📋 支持的文件类型</h3>
-          <div style={{ fontSize: '14px', lineHeight: '1.6', opacity: 0.8 }}>
-            <p>• PDF文档 (.pdf)</p>
-            <p>• Word文档 (.docx, .doc)</p>
-            <p>• 文本文件 (.txt)</p>
-            <p>• HTML文件 (.html)</p>
-            <p>• JSON文件 (.json)</p>
+          <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', opacity: 0.8 }}>📋 支持的文件类型</h3>
+          <div style={{ 
+            fontSize: '12px', 
+            lineHeight: '1.4', 
+            opacity: 0.7,
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '8px'
+          }}>
+            <span style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '4px' }}>PDF</span>
+            <span style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '4px' }}>Word</span>
+            <span style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '4px' }}>TXT</span>
+            <span style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '4px' }}>HTML</span>
+            <span style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '4px' }}>JSON</span>
           </div>
         </div>
 
@@ -162,11 +215,15 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({ show, onClose, onFile
           style={{
             border: `2px dashed ${isDragOver ? '#409eff' : '#444'}`,
             borderRadius: '12px',
-            padding: '40px 20px',
+            padding: '30px 20px',
             textAlign: 'center',
-            background: isDragOver ? 'rgba(64, 158, 255, 0.1)' : 'transparent',
+            background: isDragOver ? 'rgba(64, 158, 255, 0.1)' : 'rgba(255,255,255,0.02)',
             transition: 'all 0.3s ease',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            minHeight: '140px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center'
           }}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -174,16 +231,16 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({ show, onClose, onFile
           onClick={handleBrowseClick}
         >
           {isUploading ? (
-            <div>
-              <div style={{ fontSize: '48px', marginBottom: '20px' }}>⏳</div>
-              <h3 style={{ margin: '0 0 15px 0' }}>正在上传到OSS...</h3>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '36px', marginBottom: '15px' }}>⏳</div>
+              <h3 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>正在上传文件...</h3>
               <div style={{
                 width: '100%',
-                height: '8px',
+                height: '6px',
                 background: '#333',
-                borderRadius: '4px',
+                borderRadius: '3px',
                 overflow: 'hidden',
-                marginBottom: '10px'
+                marginBottom: '8px'
               }}>
                 <div style={{
                   width: `${uploadProgress}%`,
@@ -192,25 +249,28 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({ show, onClose, onFile
                   transition: 'width 0.3s ease'
                 }} />
               </div>
-              <p style={{ fontSize: '14px', opacity: 0.8 }}>{uploadProgress}%</p>
+              <p style={{ fontSize: '12px', opacity: 0.8, margin: 0 }}>{uploadProgress}%</p>
             </div>
           ) : (
-            <div>
-              <div style={{ fontSize: '48px', marginBottom: '20px' }}>📁</div>
-              <h3 style={{ margin: '0 0 10px 0' }}>拖拽文件到此处或点击选择</h3>
-              <p style={{ fontSize: '14px', opacity: 0.8, marginBottom: '20px' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '36px', marginBottom: '15px' }}>📁</div>
+              <h3 style={{ margin: '0 0 8px 0', fontSize: '16px' }}>拖拽文件到此处或点击选择</h3>
+              <p style={{ fontSize: '12px', opacity: 0.7, marginBottom: '15px', margin: '0 0 15px 0' }}>
                 支持PDF、Word、TXT、HTML、JSON等格式
               </p>
               <button
                 style={{
-                  padding: '10px 20px',
+                  padding: '8px 16px',
                   background: 'linear-gradient(90deg, #409eff 60%, #2b8cff 100%)',
                   color: '#fff',
                   border: 'none',
                   borderRadius: '6px',
                   cursor: 'pointer',
-                  fontSize: '14px'
+                  fontSize: '12px',
+                  transition: 'transform 0.2s ease'
                 }}
+                onMouseOver={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
+                onMouseOut={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
               >
                 选择文件
               </button>
@@ -228,8 +288,8 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({ show, onClose, onFile
 
         {uploadResult && (
           <div style={{
-            marginTop: '20px',
-            padding: '15px',
+            marginTop: '15px',
+            padding: '12px',
             borderRadius: '8px',
             background: uploadResult.success 
               ? 'rgba(103, 194, 58, 0.1)' 
@@ -237,56 +297,69 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({ show, onClose, onFile
             border: `1px solid ${uploadResult.success ? '#67c23a' : '#f56c6c'}`
           }}>
             <h4 style={{ 
-              margin: '0 0 10px 0', 
-              color: uploadResult.success ? '#67c23a' : '#f56c6c' 
+              margin: '0 0 8px 0', 
+              color: uploadResult.success ? '#67c23a' : '#f56c6c',
+              fontSize: '14px' 
             }}>
               {uploadResult.success ? '✅ 上传成功' : '❌ 上传失败'}
             </h4>
             {uploadResult.success ? (
-              <div style={{ fontSize: '14px' }}>
-                <p><strong>文件URL:</strong> {uploadResult.fileUrl}</p>
-                <p><strong>文件名:</strong> {uploadResult.fileName}</p>
+              <div style={{ fontSize: '12px', lineHeight: '1.4' }}>
+                <p style={{ margin: '0 0 4px 0', wordBreak: 'break-all' }}>
+                  <strong>文件URL:</strong> 
+                  <span style={{ opacity: 0.8, fontSize: '11px' }}>{uploadResult.fileUrl}</span>
+                </p>
+                <p style={{ margin: 0, wordBreak: 'break-word' }}>
+                  <strong>文件名:</strong> {uploadResult.fileName}
+                </p>
               </div>
             ) : (
-              <p style={{ fontSize: '14px', color: '#f56c6c' }}>
+              <p style={{ fontSize: '12px', color: '#f56c6c', margin: 0 }}>
                 {uploadResult.error}
               </p>
             )}
           </div>
         )}
 
+        {/* 操作按钮 */}
         <div style={{ 
           display: 'flex', 
-          gap: '10px', 
-          marginTop: '20px',
-          justifyContent: 'center'
+          gap: '8px', 
+          marginTop: '15px',
+          justifyContent: 'center',
+          paddingTop: '15px',
+          borderTop: '1px solid rgba(255,255,255,0.1)'
         }}>
           <button
             onClick={onClose}
             disabled={isUploading}
             style={{
-              padding: '10px 20px',
-              background: 'rgba(255,255,255,0.2)',
+              padding: '8px 16px',
+              background: isUploading ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.2)',
               color: '#fff',
               border: 'none',
               borderRadius: '6px',
               cursor: isUploading ? 'not-allowed' : 'pointer',
-              fontSize: '14px',
-              opacity: isUploading ? 0.5 : 1
+              fontSize: '12px',
+              opacity: isUploading ? 0.5 : 1,
+              transition: 'all 0.3s ease'
             }}
+            onMouseOver={(e) => !isUploading && (e.currentTarget.style.background = 'rgba(255,255,255,0.3)')}
+            onMouseOut={(e) => !isUploading && (e.currentTarget.style.background = 'rgba(255,255,255,0.2)')}
           >
-            关闭
+            {isUploading ? '上传中...' : '关闭'}
           </button>
         </div>
 
-        <div style={{ marginTop: '20px', fontSize: '12px', opacity: 0.6 }}>
-          <p><strong>注意：</strong></p>
-          <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
-            <li>文件将直接上传到阿里云OSS</li>
-            <li>上传成功后，文件将在学习中心以嵌入式方式显示</li>
-            <li>PDF文件将直接预览，Word文件将通过Office Online预览</li>
-            <li>请确保OSS配置正确且Bucket为公共访问</li>
-          </ul>
+        {/* 使用说明 - 简化版本 */}
+        <div style={{ 
+          marginTop: '12px', 
+          fontSize: '10px', 
+          opacity: 0.5, 
+          textAlign: 'center',
+          lineHeight: '1.3'
+        }}>
+          文件将上传到云服务器，支持在线预览和下载
         </div>
       </div>
     </div>

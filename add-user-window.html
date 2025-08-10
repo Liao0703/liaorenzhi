@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>添加新用户 - 班前学习监督系统</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    }
+    
+    #loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      z-index: 9999;
+    }
+    
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top: 3px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 15px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    #root {
+      min-height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">
+    <div class="loading-spinner"></div>
+    <div>正在加载添加用户窗口...</div>
+  </div>
+  <div id="root"></div>
+
+  <script type="module">
+    // 动态导入React和相关依赖
+    import React from 'https://esm.sh/react@18';
+    import ReactDOM from 'https://esm.sh/react-dom@18/client';
+
+    // 简化的API客户端
+    const API_BASE_URL = window.location.hostname === 'localhost' 
+      ? 'http://localhost:3001/api' 
+      : 'http://116.62.65.246:3001/api';
+
+    const apiClient = {
+      async request(endpoint, options = {}) {
+        const url = `${API_BASE_URL}${endpoint}`;
+        const defaultHeaders = {
+          'Content-Type': 'application/json',
+        };
+
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+          defaultHeaders['Authorization'] = `Bearer ${token}`;
+        }
+
+        const config = {
+          ...options,
+          headers: {
+            ...defaultHeaders,
+            ...options.headers,
+          },
+        };
+
+        try {
+          const response = await fetch(url, config);
+          if (!response.ok) {
+            throw new Error(`HTTP错误: ${response.status}`);
+          }
+          return await response.json();
+        } catch (error) {
+          throw error;
+        }
+      },
+
+      async post(endpoint, data) {
+        return this.request(endpoint, {
+          method: 'POST',
+          body: JSON.stringify(data),
+        });
+      }
+    };
+
+    // 用户API
+    const userAPI = {
+      create: (userData) => apiClient.post('/users', userData)
+    };
+
+    // AddUserWindow组件
+    const AddUserWindow = () => {
+      const [loading, setLoading] = React.useState(false);
+      const [message, setMessage] = React.useState(null);
+      const [formData, setFormData] = React.useState({
+        username: '',
+        password: '',
+        name: '',
+        full_name: '',
+        role: 'user',
+        employee_id: '',
+        department: '',
+        team: '',
+        job_type: '',
+        company: '',
+        email: '',
+        phone: ''
+      });
+
+      const departments = ['机务段', '车务段', '工务段', '电务段', '车辆段', '供电段', 'IT部门', '管理部门', '安全部门'];
+      const jobTypes = ['司机', '调度员', '信号工', '检车员', '线路工', '电气化工', '系统管理员', '安全员', '管理员'];
+      const companies = ['铁路局', '机务段', '车务段', '工务段', '电务段', '车辆段', '供电段', '通信段', '建设段'];
+
+      const handleSave = async () => {
+        if (!formData.username || !formData.password) {
+          setMessage({ type: 'error', text: '用户名和密码为必填项' });
+          return;
+        }
+
+        setLoading(true);
+        setMessage(null);
+
+        try {
+          await userAPI.create(formData);
+          setMessage({ type: 'success', text: '用户添加成功！' });
+          
+          setFormData({
+            username: '',
+            password: '',
+            name: '',
+            full_name: '',
+            role: 'user',
+            employee_id: '',
+            department: '',
+            team: '',
+            job_type: '',
+            company: '',
+            email: '',
+            phone: ''
+          });
+
+          setTimeout(() => {
+            setMessage({ type: 'success', text: '用户添加成功！您可以关闭此窗口返回用户管理页面。' });
+          }, 3000);
+
+        } catch (error) {
+          setMessage({ 
+            type: 'error', 
+            text: error.response?.data?.message || '添加用户失败，请重试' 
+          });
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      const handleClose = () => {
+        if (window.confirm('确定要关闭窗口吗？未保存的数据将丢失。')) {
+          window.close();
+        }
+      };
+
+      const inputStyle = {
+        width: '100%',
+        padding: '15px 18px',
+        borderRadius: '10px',
+        border: '1px solid rgba(255, 255, 255, 0.3)',
+        background: 'rgba(255, 255, 255, 0.15)',
+        color: '#fff',
+        fontSize: '16px',
+        outline: 'none',
+        transition: 'all 0.3s ease',
+        boxSizing: 'border-box'
+      };
+
+      const labelStyle = {
+        display: 'block',
+        marginBottom: '10px',
+        fontSize: '14px',
+        color: '#fff',
+        fontWeight: '600'
+      };
+
+      return React.createElement('div', {
+        style: {
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          minHeight: '100vh',
+          padding: '20px',
+          fontFamily: 'Arial, sans-serif'
+        }
+      }, [
+        // 顶部标题栏
+        React.createElement('div', {
+          key: 'header',
+          style: {
+            background: 'rgba(255, 255, 255, 0.15)',
+            borderRadius: '12px',
+            padding: '20px 30px',
+            marginBottom: '25px',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            color: '#fff',
+            border: '1px solid rgba(255, 255, 255, 0.2)'
+          }
+        }, [
+          React.createElement('div', { key: 'title' }, [
+            React.createElement('h1', {
+              key: 'h1',
+              style: {
+                margin: 0,
+                fontSize: '26px',
+                fontWeight: 'bold',
+                textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                letterSpacing: '1px'
+              }
+            }, '➕ 添加新用户'),
+            React.createElement('p', {
+              key: 'p',
+              style: {
+                margin: '8px 0 0 0',
+                opacity: 0.9,
+                fontSize: '14px'
+              }
+            }, '请填写完整的用户信息')
+          ]),
+          React.createElement('button', {
+            key: 'closeBtn',
+            onClick: handleClose,
+            style: {
+              padding: '10px 20px',
+              background: 'rgba(255, 71, 87, 0.8)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }
+          }, '✕ 关闭窗口')
+        ]),
+
+        // 消息提示
+        message && React.createElement('div', {
+          key: 'message',
+          style: {
+            background: message.type === 'success' 
+              ? 'rgba(46, 204, 113, 0.9)' 
+              : 'rgba(231, 76, 60, 0.9)',
+            color: '#fff',
+            padding: '15px 20px',
+            borderRadius: '8px',
+            marginBottom: '20px',
+            fontSize: '14px',
+            fontWeight: '500',
+            textAlign: 'center',
+            backdropFilter: 'blur(10px)',
+            boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)'
+          }
+        }, message.text),
+
+        // 表单内容
+        React.createElement('div', {
+          key: 'form',
+          style: {
+            background: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(20px)',
+            padding: '40px',
+            borderRadius: '20px',
+            color: '#fff',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)'
+          }
+        }, [
+          React.createElement('div', {
+            key: 'fields',
+            style: {
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+              gap: '25px',
+              marginBottom: '30px'
+            }
+          }, [
+            // 用户名
+            React.createElement('div', { key: 'username' }, [
+              React.createElement('label', { key: 'label', style: labelStyle }, '用户名 *'),
+              React.createElement('input', {
+                key: 'input',
+                type: 'text',
+                value: formData.username,
+                onChange: (e) => setFormData({...formData, username: e.target.value}),
+                style: inputStyle,
+                placeholder: '请输入用户名'
+              })
+            ]),
+
+            // 密码
+            React.createElement('div', { key: 'password' }, [
+              React.createElement('label', { key: 'label', style: labelStyle }, '密码 *'),
+              React.createElement('input', {
+                key: 'input',
+                type: 'password',
+                value: formData.password,
+                onChange: (e) => setFormData({...formData, password: e.target.value}),
+                style: inputStyle,
+                placeholder: '请输入密码'
+              })
+            ]),
+
+            // 姓名
+            React.createElement('div', { key: 'name' }, [
+              React.createElement('label', { key: 'label', style: labelStyle }, '姓名'),
+              React.createElement('input', {
+                key: 'input',
+                type: 'text',
+                value: formData.name,
+                onChange: (e) => setFormData({...formData, name: e.target.value}),
+                style: inputStyle,
+                placeholder: '请输入姓名'
+              })
+            ]),
+
+            // 角色选择
+            React.createElement('div', { key: 'role' }, [
+              React.createElement('label', { key: 'label', style: labelStyle }, '角色'),
+              React.createElement('select', {
+                key: 'select',
+                value: formData.role,
+                onChange: (e) => setFormData({...formData, role: e.target.value}),
+                style: { ...inputStyle, cursor: 'pointer' }
+              }, [
+                React.createElement('option', { key: 'user', value: 'user' }, '普通用户'),
+                React.createElement('option', { key: 'maintenance', value: 'maintenance' }, '维护人员'),
+                React.createElement('option', { key: 'admin', value: 'admin' }, '系统管理员')
+              ])
+            ])
+          ]),
+
+          // 操作按钮
+          React.createElement('div', {
+            key: 'buttons',
+            style: {
+              display: 'flex',
+              gap: '20px',
+              justifyContent: 'center',
+              flexWrap: 'wrap',
+              paddingTop: '20px',
+              borderTop: '1px solid rgba(255, 255, 255, 0.2)'
+            }
+          }, [
+            React.createElement('button', {
+              key: 'reset',
+              onClick: () => {
+                if (window.confirm('确定要重置表单吗？')) {
+                  setFormData({
+                    username: '',
+                    password: '',
+                    name: '',
+                    full_name: '',
+                    role: 'user',
+                    employee_id: '',
+                    department: '',
+                    team: '',
+                    job_type: '',
+                    company: '',
+                    email: '',
+                    phone: ''
+                  });
+                  setMessage(null);
+                }
+              },
+              style: {
+                padding: '15px 30px',
+                background: 'rgba(255,255,255,0.15)',
+                color: '#fff',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                borderRadius: '30px',
+                cursor: 'pointer',
+                fontSize: '16px',
+                fontWeight: '500'
+              }
+            }, '🔄 重置表单'),
+
+            React.createElement('button', {
+              key: 'save',
+              onClick: handleSave,
+              disabled: loading || !formData.username || !formData.password,
+              style: {
+                padding: '15px 40px',
+                background: loading || !formData.username || !formData.password
+                  ? 'rgba(255,255,255,0.3)'
+                  : 'linear-gradient(90deg,#409eff 60%,#2b8cff 100%)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '30px',
+                cursor: loading || !formData.username || !formData.password ? 'not-allowed' : 'pointer',
+                fontSize: '16px',
+                fontWeight: '600'
+              }
+            }, loading ? '⏳ 添加中...' : '✅ 添加用户')
+          ])
+        ])
+      ]);
+    };
+
+    // 隐藏加载页面并渲染组件
+    setTimeout(() => {
+      document.getElementById('loading').style.display = 'none';
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(React.createElement(AddUserWindow));
+    }, 500);
+  </script>
+</body>
+</html>

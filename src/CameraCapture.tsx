@@ -6,21 +6,33 @@ interface CameraCaptureProps {
   interval: number; // 拍照间隔（秒）
   enableFaceRecognition?: boolean; // 是否启用人脸识别
   onFaceRecognitionResult?: (result: any) => void; // 人脸识别结果回调
+  enableRandomCapture?: boolean; // 启用随机拍摄N张
+  randomCaptureCount?: number; // 随机拍摄数量
+  enableAntiCheating?: boolean; // 启用防代学功能
+  onAntiCheatingAlert?: () => void; // 防代学检测到问题时的回调
 }
 
 const CameraCapture: React.FC<CameraCaptureProps> = ({ 
   isActive, 
   onPhotoTaken, 
-  interval
-  // enableFaceRecognition = false,
-  // onFaceRecognitionResult 
+  interval,
+  enableFaceRecognition = false,
+  onFaceRecognitionResult,
+  enableRandomCapture = false,
+  randomCaptureCount = 3,
+  enableAntiCheating = false,
+  onAntiCheatingAlert
 }) => {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string>('');
   const [isCameraReady, setIsCameraReady] = useState(false);
+  const [isRandomCaptureActive, setIsRandomCaptureActive] = useState(false);
+  const [currentRandomCount, setCurrentRandomCount] = useState(0);
+  const [learningPaused, setLearningPaused] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const intervalRef = useRef<number | null>(null);
+  const randomCaptureTimeoutRef = useRef<number | null>(null);
 
   // 启动摄像头
   const startCamera = async () => {
@@ -29,7 +41,12 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
       
       // 检查浏览器是否支持媒体设备API
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('浏览器不支持摄像头功能');
+        throw new Error('浏览器不支持摄像头功能，请使用Chrome、Firefox、Safari等现代浏览器');
+      }
+      
+      // 检查是否在HTTPS环境下
+      if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+        console.warn('摄像头功能在非HTTPS环境下可能受限');
       }
       
       // 安全地获取摄像头设备列表
@@ -44,6 +61,10 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
       
       const videoDevices = devices.filter(device => device.kind === 'videoinput');
       console.log('可用的摄像头设备:', videoDevices.map(d => ({ id: d.deviceId, label: d.label })));
+      
+      if (videoDevices.length === 0) {
+        throw new Error('未检测到摄像头设备，请检查摄像头连接或尝试刷新页面');
+      }
       
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -80,7 +101,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
         
         videoRef.current.onerror = (e) => {
           console.error('视频加载错误:', e);
-          setError('视频加载失败');
+          setError('视频加载失败，请检查摄像头是否被其他应用占用');
         };
       }
       
@@ -89,16 +110,18 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
       console.error('摄像头启动失败:', err);
       if (err instanceof Error) {
         if (err.name === 'NotAllowedError') {
-          setError('摄像头权限被拒绝，请在浏览器设置中允许摄像头访问');
+          setError('摄像头权限被拒绝\n\n解决方案：\n1. 点击地址栏左侧的摄像头图标\n2. 选择"允许"摄像头访问\n3. 刷新页面重试');
         } else if (err.name === 'NotFoundError') {
-          setError('未找到摄像头设备');
+          setError('未找到摄像头设备\n\n解决方案：\n1. 检查摄像头是否正确连接\n2. 确保摄像头未被其他应用占用\n3. 尝试重新插拔摄像头\n4. 刷新页面重试');
         } else if (err.name === 'NotReadableError') {
-          setError('摄像头被其他应用占用');
+          setError('摄像头被其他应用占用\n\n解决方案：\n1. 关闭其他使用摄像头的应用\n2. 重启浏览器\n3. 检查系统摄像头设置');
+        } else if (err.name === 'NotSupportedError') {
+          setError('浏览器不支持摄像头功能\n\n解决方案：\n1. 使用Chrome、Firefox、Safari等现代浏览器\n2. 确保浏览器版本较新\n3. 检查浏览器设置中的摄像头权限');
         } else {
-          setError(`摄像头启动失败: ${err.message}`);
+          setError(`摄像头启动失败: ${err.message}\n\n请检查：\n1. 摄像头硬件是否正常\n2. 浏览器权限设置\n3. 系统摄像头驱动`);
         }
       } else {
-        setError('无法访问摄像头，请检查摄像头权限设置');
+        setError('无法访问摄像头\n\n请检查：\n1. 摄像头硬件连接\n2. 浏览器权限设置\n3. 系统摄像头驱动\n4. 尝试刷新页面');
       }
     }
   };
@@ -117,11 +140,66 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+    if (randomCaptureTimeoutRef.current) {
+      clearTimeout(randomCaptureTimeoutRef.current);
+      randomCaptureTimeoutRef.current = null;
+    }
     setIsCameraReady(false);
+    setIsRandomCaptureActive(false);
+    setCurrentRandomCount(0);
+    setLearningPaused(false);
+  };
+
+  // 简单的人脸检测（基于肤色和基本图像分析）
+  const detectFace = (imageData: ImageData): boolean => {
+    // 简单的肤色检测算法
+    let skinPixels = 0;
+    let totalPixels = imageData.data.length / 4;
+    
+    for (let i = 0; i < imageData.data.length; i += 4) {
+      const r = imageData.data[i];
+      const g = imageData.data[i + 1];
+      const b = imageData.data[i + 2];
+      
+      // 简单的肤色检测（RGB范围）
+      if (r > 95 && g > 40 && b > 20 && 
+          r > g && r > b && 
+          r - g > 15 && 
+          Math.abs(r - g) > 15) {
+        skinPixels++;
+      }
+    }
+    
+    const skinRatio = skinPixels / totalPixels;
+    // 如果肤色像素比例在合理范围内，认为有人脸
+    return skinRatio > 0.02 && skinRatio < 0.4;
+  };
+
+  // 随机拍摄N张照片
+  const performRandomCapture = async () => {
+    if (!enableRandomCapture || isRandomCaptureActive) return;
+    
+    setIsRandomCaptureActive(true);
+    setCurrentRandomCount(0);
+    
+    console.log(`开始随机拍摄 ${randomCaptureCount} 张照片`);
+    
+    for (let i = 0; i < randomCaptureCount; i++) {
+      setCurrentRandomCount(i + 1);
+      await new Promise(resolve => setTimeout(resolve, 500)); // 每张照片间隔500ms
+      takePhoto(true); // 传递参数表示这是随机拍摄
+    }
+    
+    setIsRandomCaptureActive(false);
+    setCurrentRandomCount(0);
+    
+    // 安排下一次随机拍摄（在间隔时间的50%-150%范围内随机）
+    const randomDelay = interval * 1000 * (0.5 + Math.random());
+    randomCaptureTimeoutRef.current = window.setTimeout(performRandomCapture, randomDelay);
   };
 
   // 拍照
-  const takePhoto = () => {
+  const takePhoto = (isRandomCapture = false) => {
     if (!videoRef.current || !canvasRef.current || !stream || !isCameraReady) {
       console.log('拍照条件不满足:', {
         hasVideo: !!videoRef.current,
@@ -188,10 +266,28 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
         return;
       }
 
+      // 人脸检测（如果启用防代学功能）
+      let faceDetected = true;
+      if (enableAntiCheating) {
+        faceDetected = detectFace(imageData);
+        console.log('人脸检测结果:', faceDetected ? '检测到人脸' : '未检测到人脸');
+        
+        if (!faceDetected) {
+          setLearningPaused(true);
+          console.warn('⚠️ 防代学检测：未检测到人脸，学习暂停');
+          if (onAntiCheatingAlert) {
+            onAntiCheatingAlert();
+          }
+        } else if (learningPaused) {
+          setLearningPaused(false);
+          console.log('✅ 检测到人脸，学习恢复');
+        }
+      }
+
       // 转换为base64数据
       const photoData = canvas.toDataURL('image/jpeg', 0.9);
       
-      console.log('照片拍摄成功，大小:', photoData.length, '字节');
+      console.log(`照片拍摄成功 ${isRandomCapture ? '(随机拍摄)' : '(定时拍摄)'}，大小:`, photoData.length, '字节');
       console.log('照片数据预览:', photoData.substring(0, 100) + '...');
       
       // 调用回调函数
@@ -213,6 +309,13 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
     intervalRef.current = window.setInterval(() => {
       takePhoto();
     }, interval * 1000);
+
+    // 如果启用随机拍摄，也启动随机拍摄
+    if (enableRandomCapture) {
+      // 在首次启动后的随机时间开始随机拍摄
+      const initialDelay = Math.random() * interval * 1000 * 0.5; // 0-50%的间隔时间后开始
+      randomCaptureTimeoutRef.current = window.setTimeout(performRandomCapture, initialDelay);
+    }
   };
 
   // 监听isActive状态变化
@@ -241,7 +344,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
 
       return () => clearTimeout(timer);
     }
-  }, [stream, isActive, isCameraReady, interval]);
+  }, [stream, isActive, isCameraReady, interval, enableRandomCapture, randomCaptureCount]);
 
   // 组件卸载时清理
   useEffect(() => {
@@ -256,31 +359,72 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
         position: 'fixed',
         top: '10px',
         left: '10px',
-        background: 'rgba(255, 0, 0, 0.8)',
+        background: 'rgba(255, 0, 0, 0.9)',
         color: 'white',
-        padding: '10px',
-        borderRadius: '5px',
+        padding: '15px',
+        borderRadius: '8px',
         fontSize: '12px',
         zIndex: 1001,
-        maxWidth: '300px'
+        maxWidth: '350px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+        border: '1px solid rgba(255,255,255,0.2)'
       }}>
-        ⚠️ {error}
-        <br />
-        <button
-          onClick={startCamera}
-          style={{
-            marginTop: '5px',
-            padding: '4px 8px',
-            background: 'rgba(255,255,255,0.2)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '3px',
-            cursor: 'pointer',
-            fontSize: '10px'
-          }}
-        >
-          重试
-        </button>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          marginBottom: '10px',
+          fontSize: '14px',
+          fontWeight: 'bold'
+        }}>
+          ⚠️ 摄像头错误
+        </div>
+        <div style={{ 
+          whiteSpace: 'pre-line', 
+          lineHeight: '1.4',
+          marginBottom: '10px'
+        }}>
+          {error}
+        </div>
+        <div style={{ 
+          display: 'flex', 
+          gap: '8px',
+          flexWrap: 'wrap'
+        }}>
+          <button
+            onClick={startCamera}
+            style={{
+              padding: '6px 12px',
+              background: 'rgba(255,255,255,0.2)',
+              color: 'white',
+              border: '1px solid rgba(255,255,255,0.3)',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '11px',
+              transition: 'all 0.2s'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
+            onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+          >
+            重试
+          </button>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              padding: '6px 12px',
+              background: 'rgba(255,255,255,0.2)',
+              color: 'white',
+              border: '1px solid rgba(255,255,255,0.3)',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '11px',
+              transition: 'all 0.2s'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
+            onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+          >
+            刷新页面
+          </button>
+        </div>
       </div>
     );
   }
@@ -315,6 +459,26 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
         {!isCameraReady && (
           <div style={{ fontSize: '10px', color: '#ffaa00', marginTop: '2px' }}>
             摄像头启动中...
+          </div>
+        )}
+        {enableRandomCapture && (
+          <div style={{ fontSize: '10px', color: '#00ff88', marginTop: '2px' }}>
+            🎲 随机拍摄已启用
+          </div>
+        )}
+        {isRandomCaptureActive && (
+          <div style={{ fontSize: '10px', color: '#ff8800', marginTop: '2px' }}>
+            📸 随机拍摄中... ({currentRandomCount}/{randomCaptureCount})
+          </div>
+        )}
+        {enableAntiCheating && learningPaused && (
+          <div style={{ fontSize: '10px', color: '#ff4444', marginTop: '2px', fontWeight: 'bold' }}>
+            ⚠️ 学习已暂停 - 未检测到人脸
+          </div>
+        )}
+        {enableAntiCheating && !learningPaused && (
+          <div style={{ fontSize: '10px', color: '#44ff44', marginTop: '2px' }}>
+            🔒 防代学监控中
           </div>
         )}
       </div>

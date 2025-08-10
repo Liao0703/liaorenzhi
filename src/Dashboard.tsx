@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import HexagonChart from './components/HexagonChart';
+
 
 interface DashboardProps {
   user: any;
@@ -15,7 +17,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     completedArticles: 8,
     totalStudyTime: 240, // 分钟
     averageScore: 85,
-    currentStreak: 5
+    currentStreak: 5,
+    // 各学习领域成绩
+    domainScores: {
+      safety: 88,      // 安全规程
+      maintenance: 82, // 设备维护
+      emergency: 75,   // 应急处理
+      signal: 91,      // 信号系统
+      dispatch: 79,    // 调度规范
+      operation: 85    // 作业标准
+    }
   };
 
   const handleLogout = () => {
@@ -198,6 +209,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         </div>
       </div>
 
+      {/* 六边形学习领域成绩图 */}
+      {user?.role === 'user' && (
+        <div style={{ marginBottom: '30px' }}>
+          <HexagonChart scores={stats.domainScores} />
+        </div>
+      )}
+
       {/* 最近学习记录 */}
       <div style={{
         background: 'rgba(0,0,0,0.3)',
@@ -242,6 +260,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           </div>
         </div>
       </div>
+
+
     </div>
   );
 };

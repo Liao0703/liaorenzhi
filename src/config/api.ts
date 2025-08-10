@@ -3,18 +3,20 @@ const getApiBaseUrl = () => {
   const hostname = window.location.hostname;
   
   // 如果是云服务器或Vercel部署环境
-  if (hostname === '116.62.65.246' || 
-      hostname === 'www.liaorenzhi.top' || 
-      hostname === 'liaorenzhi.top' ||
-      hostname.includes('vercel.app')) {
-    // 云服务器环境，使用云服务器API
-    return 'http://116.62.65.246:3001/api';
+  if (
+    hostname === '116.62.65.246' ||
+    hostname === 'www.liaorenzhi.top' ||
+    hostname === 'liaorenzhi.top' ||
+    hostname.includes('vercel.app')
+  ) {
+    // 生产/云端环境：使用启用 HTTPS 的独立 API 域名，避免混合内容
+    return 'https://api.liaorenzhi.top/api';
   }
   // 本地开发环境
   return 'http://localhost:3001/api';
 };
 
-const API_BASE_URL = getApiBaseUrl();
+export const API_BASE_URL = getApiBaseUrl();
 
 // API客户端
 class ApiClient {
@@ -43,20 +45,28 @@ class ApiClient {
         ...options.headers,
       },
       // 添加超时控制
-      signal: AbortSignal.timeout(5000), // 5秒超时
+      signal: AbortSignal.timeout(10000), // 增加到10秒超时
     };
 
     try {
+      console.log(`API请求: ${url}`, config);
       const response = await fetch(url, config);
+      
+      console.log(`API响应: ${response.status} ${response.statusText}`);
+      
       if (!response.ok) {
-        console.warn(`API请求失败: ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        console.warn(`API请求失败: ${response.status} ${response.statusText}`, errorText);
         return { 
           success: false, 
           error: `HTTP错误: ${response.status} ${response.statusText}`,
           statusCode: response.status
         };
       }
-      return await response.json();
+      
+      const data = await response.json();
+      console.log('API响应数据:', data);
+      return data;
     } catch (error) {
       console.error('API请求失败:', error);
       return { 

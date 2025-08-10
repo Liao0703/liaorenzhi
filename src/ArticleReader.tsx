@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getArticleById } from './articleData';
 import CameraCapture from './CameraCapture';
+import CameraDiagnostic from './CameraDiagnostic';
 import { savePhoto } from './photoStorage';
 import { getSettings } from './settingsStorage';
 import { getFilePreviewUrl } from './fileUploadService';
@@ -23,6 +24,7 @@ const ArticleReader: React.FC<ArticleReaderProps> = ({ user: _user }) => {
   const [score, setScore] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const [, setCapturedPhotos] = useState<string[]>([]);
+  const [showDiagnostic, setShowDiagnostic] = useState(false);
   
   const intervalRef = useRef<number | null>(null);
 
@@ -174,7 +176,18 @@ const ArticleReader: React.FC<ArticleReaderProps> = ({ user: _user }) => {
         isActive={isTimerActive && currentStep === 'reading'}
         onPhotoTaken={handlePhotoTaken}
         interval={getSettings().cameraInterval} // 使用系统设置的拍照间隔
+        enableRandomCapture={getSettings().enableRandomCapture}
+        randomCaptureCount={getSettings().randomCaptureCount}
+        enableAntiCheating={getSettings().enableAntiCheating}
+        onAntiCheatingAlert={() => {
+          alert('⚠️ 防代学检测：未检测到学习者本人\n\n请确保您本人坐在摄像头前进行学习。\n学习进度已暂停，请调整位置后继续。');
+        }}
       />
+      
+      {/* 摄像头诊断工具 */}
+      {showDiagnostic && (
+        <CameraDiagnostic onClose={() => setShowDiagnostic(false)} />
+      )}
       {/* 顶部导航 */}
       <div style={{
         display: 'flex',
@@ -187,20 +200,36 @@ const ArticleReader: React.FC<ArticleReaderProps> = ({ user: _user }) => {
         backdropFilter: 'blur(10px)'
       }}>
         <h2 style={{ margin: 0, fontSize: isMobile ? '20px' : '24px' }}>{article.title}</h2>
-        <button
-          onClick={() => navigate('/articles')}
-          style={{
-            padding: isMobile ? '8px 16px' : '10px 20px',
-            background: 'rgba(255,255,255,0.2)',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: isMobile ? '12px' : '14px'
-          }}
-        >
-          返回列表
-        </button>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button
+            onClick={() => setShowDiagnostic(true)}
+            style={{
+              padding: isMobile ? '8px 16px' : '10px 20px',
+              background: 'rgba(255,255,255,0.1)',
+              color: '#fff',
+              border: '1px solid rgba(255,255,255,0.3)',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: isMobile ? '12px' : '14px'
+            }}
+          >
+            📷 摄像头诊断
+          </button>
+          <button
+            onClick={() => navigate('/articles')}
+            style={{
+              padding: isMobile ? '8px 16px' : '10px 20px',
+              background: 'rgba(255,255,255,0.2)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: isMobile ? '12px' : '14px'
+            }}
+          >
+            返回列表
+          </button>
+        </div>
       </div>
 
       {/* 计时器 */}

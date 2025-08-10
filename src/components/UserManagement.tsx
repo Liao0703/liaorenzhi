@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { userAPI } from '../config/api';
 
+// 扩展Window接口
+declare global {
+  interface Window {
+    refreshUserList?: () => void;
+  }
+}
+
 interface User {
   id: number;
   username: string;
   name: string;
   full_name?: string;
-  role: 'admin' | 'maintenance' | 'user';
   employee_id?: string;
   department?: string;
   team?: string;
@@ -31,24 +37,20 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
     password: '',
     name: '',
     full_name: '',
-    role: 'user' as 'admin' | 'maintenance' | 'user',
     employee_id: '',
-    department: '',
+    department: '白市驿车站',
     team: '',
     job_type: '',
-    company: '',
+    company: '兴隆村车站',
     email: '',
     phone: ''
   });
 
-  // 部门选项
-  const departments = ['机务段', '车务段', '工务段', '电务段', '车辆段', '供电段', 'IT部门', '管理部门', '安全部门'];
+  // 班组选项
+  const teams = ['运转一班', '运转二班', '运转三班', '运转四班'];
   
   // 工种选项
-  const jobTypes = ['司机', '调度员', '信号工', '检车员', '线路工', '电气化工', '系统管理员', '安全员', '管理员'];
-  
-  // 单位选项
-  const companies = ['铁路局', '机务段', '车务段', '工务段', '电务段', '车辆段', '供电段'];
+  const jobTypes = ['车站值班员', '助理值班员（内勤）', '助理值班员（外勤）', '连结员', '调车长', '列尾作业员', '站调', '车号员'];
 
   // 加载用户列表
   const loadUsers = async () => {
@@ -67,6 +69,15 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
 
   useEffect(() => {
     loadUsers();
+    // 为全局设置刷新函数
+    window.refreshUserList = loadUsers;
+    
+    // 清理函数
+    return () => {
+      if (window.refreshUserList === loadUsers) {
+        delete window.refreshUserList;
+      }
+    };
   }, []);
 
   // 生成工号
@@ -79,44 +90,95 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
     return newId.toString().padStart(5, '0');
   };
 
-  // 打开添加用户表单
+  // 打开新窗口添加用户
   const handleAdd = () => {
-    setFormData({
-      username: '',
-      password: '',
-      name: '',
-      full_name: '',
-      role: 'user',
-      employee_id: generateEmployeeId(),
-      department: departments[0],
-      team: '',
-      job_type: jobTypes[0],
-      company: companies[0],
-      email: '',
-      phone: ''
-    });
-    setEditingUser(null);
-    setShowForm(true);
+    const width = 1200;
+    const height = 800;
+    const left = Math.floor((screen.width - width) / 2);
+    const top = Math.floor((screen.height - height) / 2);
+    
+    const newWindow = window.open(
+      './add-user-window.html',
+      'addUser',
+      `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no`
+    );
+    
+    if (!newWindow) {
+      const useInline = window.confirm('无法打开新窗口，可能被浏览器阻止了。\n\n点击"确定"使用内联表单添加用户，\n点击"取消"查看解决方案。');
+      if (useInline) {
+        // 备用方案：使用内联表单
+        setFormData({
+          username: '',
+          password: '',
+          name: '',
+          full_name: '',
+          employee_id: generateEmployeeId(),
+          department: '白市驿车站',
+          team: teams[0],
+          job_type: jobTypes[0],
+          company: '兴隆村车站',
+          email: '',
+          phone: ''
+        });
+        setEditingUser(null);
+        setShowForm(true);
+      } else {
+        alert('解决方案：\n1. 点击地址栏右侧的弹窗图标\n2. 选择"始终允许此网站的弹出式窗口"\n3. 重新点击添加用户按钮');
+      }
+    }
   };
 
-  // 打开编辑用户表单
+  // 打开编辑用户表单或新窗口
   const handleEdit = (user: User) => {
-    setFormData({
-      username: user.username,
-      password: '',
-      name: user.name,
+    const width = 1200;
+    const height = 800;
+    const left = Math.floor((screen.width - width) / 2);
+    const top = Math.floor((screen.height - height) / 2);
+    
+    // 构建URL参数
+    const params = new URLSearchParams({
+      id: user.id.toString(),
+      username: user.username || '',
+      name: user.name || '',
       full_name: user.full_name || '',
-      role: user.role,
       employee_id: user.employee_id || '',
-      department: user.department || departments[0],
-      team: user.team || '',
+      department: '白市驿车站',
+      team: user.team || teams[0],
       job_type: user.job_type || jobTypes[0],
-      company: user.company || companies[0],
+      company: '兴隆村车站',
       email: user.email || '',
       phone: user.phone || ''
     });
-    setEditingUser(user);
-    setShowForm(true);
+    
+    const newWindow = window.open(
+      `./edit-user-window.html?${params.toString()}`,
+      'editUser',
+      `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no`
+    );
+    
+    if (!newWindow) {
+      const useInline = window.confirm('无法打开新窗口，可能被浏览器阻止了。\n\n点击"确定"使用内联表单编辑用户，\n点击"取消"查看解决方案。');
+      if (useInline) {
+        // 备用方案：使用内联表单
+        setFormData({
+          username: user.username,
+          password: '',
+          name: user.name,
+          full_name: user.full_name || '',
+          employee_id: user.employee_id || '',
+          department: '白市驿车站',
+          team: user.team || teams[0],
+          job_type: user.job_type || jobTypes[0],
+          company: '兴隆村车站',
+          email: user.email || '',
+          phone: user.phone || ''
+        });
+        setEditingUser(user);
+        setShowForm(true);
+      } else {
+        alert('解决方案：\n1. 点击地址栏右侧的弹窗图标\n2. 选择"始终允许此网站的弹出式窗口"\n3. 重新点击编辑按钮');
+      }
+    }
   };
 
   // 保存用户
@@ -135,8 +197,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
           alert('更新失败: ' + response.error);
         }
       } else {
-        // 创建用户
-        const response = await userAPI.create(formData);
+        // 创建用户 - 添加默认role
+        const userData = { ...formData, role: 'user' };
+        const response = await userAPI.create(userData);
         if (response.success) {
           await loadUsers();
           setShowForm(false);
@@ -152,23 +215,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
     }
   };
 
-  const getRoleText = (role: string) => {
-    switch (role) {
-      case 'admin': return '系统管理员';
-      case 'maintenance': return '维护人员';
-      case 'user': return '普通用户';
-      default: return role;
-    }
-  };
 
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'admin': return '#ff4757';
-      case 'maintenance': return '#3742fa';
-      case 'user': return '#2ed573';
-      default: return '#57606f';
-    }
-  };
 
   return (
     <div style={{
@@ -211,26 +258,25 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
           <thead>
             <tr style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
               <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px' }}>工号</th>
-              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px' }}>用户名</th>
               <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px' }}>姓名</th>
-              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px' }}>角色</th>
+              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px' }}>电话</th>
+              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px' }}>单位</th>
               <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px' }}>部门</th>
               <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px' }}>班组</th>
               <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px' }}>工种</th>
-              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px' }}>单位</th>
               <th style={{ padding: '12px 8px', textAlign: 'center', fontSize: '12px' }}>操作</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={9} style={{ padding: '20px', textAlign: 'center' }}>
+                <td colSpan={8} style={{ padding: '20px', textAlign: 'center' }}>
                   加载中...
                 </td>
               </tr>
             ) : users.length === 0 ? (
               <tr>
-                <td colSpan={9} style={{ padding: '20px', textAlign: 'center' }}>
+                <td colSpan={8} style={{ padding: '20px', textAlign: 'center' }}>
                   暂无用户数据
                 </td>
               </tr>
@@ -242,25 +288,14 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
                       {user.employee_id || '-'}
                     </code>
                   </td>
-                  <td style={{ padding: '8px', fontSize: '12px' }}>{user.username}</td>
                   <td style={{ padding: '8px', fontSize: '12px' }}>
-                    <div>{user.full_name || user.name}</div>
+                    {user.full_name || user.name}
                   </td>
-                  <td style={{ padding: '8px', fontSize: '12px' }}>
-                    <span style={{
-                      background: getRoleColor(user.role),
-                      color: '#fff',
-                      padding: '2px 8px',
-                      borderRadius: '12px',
-                      fontSize: '10px'
-                    }}>
-                      {getRoleText(user.role)}
-                    </span>
-                  </td>
-                  <td style={{ padding: '8px', fontSize: '12px' }}>{user.department || '-'}</td>
+                  <td style={{ padding: '8px', fontSize: '12px' }}>{user.phone || '-'}</td>
+                  <td style={{ padding: '8px', fontSize: '12px' }}>兴隆村车站</td>
+                  <td style={{ padding: '8px', fontSize: '12px' }}>白市驿车站</td>
                   <td style={{ padding: '8px', fontSize: '12px' }}>{user.team || '-'}</td>
                   <td style={{ padding: '8px', fontSize: '12px' }}>{user.job_type || '-'}</td>
-                  <td style={{ padding: '8px', fontSize: '12px' }}>{user.company || '-'}</td>
                   <td style={{ padding: '8px', textAlign: 'center' }}>
                     <button
                       onClick={() => handleEdit(user)}
@@ -500,64 +535,25 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
                 />
               </div>
 
-              <div>
-                <label style={{ 
-                  display: 'block', 
-                  marginBottom: '8px', 
-                  fontSize: '12px',
-                  color: '#fff',
-                  fontWeight: '500'
-                }}>角色</label>
-                <select
-                  value={formData.role}
-                  onChange={e => setFormData({...formData, role: e.target.value as 'admin' | 'maintenance' | 'user'})}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(255, 255, 255, 0.3)',
-                    background: 'rgba(255, 255, 255, 0.15)',
-                    color: '#fff',
-                    fontSize: '14px',
-                    outline: 'none',
-                    transition: 'all 0.3s ease',
-                    boxSizing: 'border-box',
-                    cursor: 'pointer'
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = '#409eff';
-                    e.target.style.boxShadow = '0 0 0 2px rgba(64, 158, 255, 0.2)';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-                    e.target.style.boxShadow = 'none';
-                  }}
-                >
-                  <option value="user" style={{ background: '#2c3e50', color: '#fff' }}>普通用户</option>
-                  <option value="maintenance" style={{ background: '#2c3e50', color: '#fff' }}>维护人员</option>
-                  <option value="admin" style={{ background: '#2c3e50', color: '#fff' }}>系统管理员</option>
-                </select>
-              </div>
+
 
               <div>
                 <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px' }}>部门</label>
-                <select
-                  value={formData.department}
-                  onChange={e => setFormData({...formData, department: e.target.value})}
+                <input
+                  type="text"
+                  value="白市驿车站"
+                  readOnly
                   style={{
                     width: '100%',
                     padding: '8px',
                     borderRadius: '6px',
                     border: 'none',
-                    background: 'rgba(255,255,255,0.2)',
+                    background: 'rgba(255,255,255,0.1)',
                     color: '#fff',
-                    fontSize: '14px'
+                    fontSize: '14px',
+                    opacity: 0.8
                   }}
-                >
-                  {departments.map(dept => (
-                    <option key={dept} value={dept}>{dept}</option>
-                  ))}
-                </select>
+                />
               </div>
 
               <div>
@@ -568,32 +564,23 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
                   color: '#fff',
                   fontWeight: '500'
                 }}>班组</label>
-                <input
-                  type="text"
+                <select
                   value={formData.team}
                   onChange={e => setFormData({...formData, team: e.target.value})}
                   style={{
                     width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(255, 255, 255, 0.3)',
-                    background: 'rgba(255, 255, 255, 0.15)',
+                    padding: '8px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: 'rgba(255,255,255,0.2)',
                     color: '#fff',
-                    fontSize: '14px',
-                    outline: 'none',
-                    transition: 'all 0.3s ease',
-                    boxSizing: 'border-box'
+                    fontSize: '14px'
                   }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = '#409eff';
-                    e.target.style.boxShadow = '0 0 0 2px rgba(64, 158, 255, 0.2)';
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-                    e.target.style.boxShadow = 'none';
-                  }}
-                  placeholder="请输入班组名称"
-                />
+                >
+                  {teams.map(team => (
+                    <option key={team} value={team}>{team}</option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -619,23 +606,21 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
 
               <div>
                 <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px' }}>单位</label>
-                <select
-                  value={formData.company}
-                  onChange={e => setFormData({...formData, company: e.target.value})}
+                <input
+                  type="text"
+                  value="兴隆村车站"
+                  readOnly
                   style={{
                     width: '100%',
                     padding: '8px',
                     borderRadius: '6px',
                     border: 'none',
-                    background: 'rgba(255,255,255,0.2)',
+                    background: 'rgba(255,255,255,0.1)',
                     color: '#fff',
-                    fontSize: '14px'
+                    fontSize: '14px',
+                    opacity: 0.8
                   }}
-                >
-                  {companies.map(company => (
-                    <option key={company} value={company}>{company}</option>
-                  ))}
-                </select>
+                />
               </div>
 
               <div>
