@@ -21,6 +21,18 @@ import { maintenanceService } from './maintenanceService';
 import { API_BASE_URL } from './config/api';
 import MaintenanceTest from './MaintenanceTest';
 
+// 安全 JSON 解析，避免 'undefined'/'null'/空串 导致运行时异常
+function parseJsonSafe<T = any>(raw: string | null): T | null {
+  try {
+    if (!raw) return null;
+    const trimmed = raw.trim();
+    if (trimmed === '' || trimmed === 'undefined' || trimmed === 'null') return null;
+    return JSON.parse(trimmed) as T;
+  } catch {
+    return null;
+  }
+}
+
 const AppContent = () => {
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -37,7 +49,7 @@ const AppContent = () => {
       console.log('🔍 App启动 - 检查登录状态:', { 
         hasToken: !!token, 
         hasSavedUser: !!savedUser,
-        savedUserData: savedUser ? JSON.parse(savedUser) : null 
+        savedUserData: parseJsonSafe(savedUser)
       });
       
       if (token) {
@@ -76,20 +88,18 @@ const AppContent = () => {
           
           // 网络错误时检查本地存储的用户信息
           if (savedUser) {
-            try {
-              const userData = JSON.parse(savedUser);
+            const userData = parseJsonSafe<any>(savedUser);
+            if (userData) {
               console.log('📱 使用本地缓存的用户数据:', userData);
-              
               // 验证本地数据完整性
               if (!userData.role) {
                 console.warn('⚠️ 警告: 本地用户数据缺少角色字段，设置为默认角色');
                 userData.role = 'user';
                 localStorage.setItem('learning_user', JSON.stringify(userData));
               }
-              
               setUser(userData);
-            } catch (parseError) {
-              console.error('🔥 解析本地用户数据失败:', parseError);
+            } else {
+              console.warn('⚠️ 本地缓存用户数据无效，已清除');
               localStorage.removeItem('learning_user');
               setUser(null);
             }
