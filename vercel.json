@@ -4,8 +4,12 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/api/(.*)",
+      "destination": "http://116.62.65.246:3001/api/$1"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
   ]
-} 
+}

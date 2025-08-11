@@ -17,7 +17,8 @@ const getApiBaseUrl = () => {
     hostname === 'liaorenzhi.top' ||
     hostname.includes('vercel.app')
   ) {
-    return 'https://api.liaorenzhi.top/api';
+    // 优先走同源代理（适配 Vercel 重写），可被 VITE_API_BASE_URL 覆盖
+    return '/api';
   }
 
   // 3) 本地开发（浏览器访问 http://localhost:5173 等）
