@@ -286,11 +286,31 @@ const memoryQuery = {
   }
 };
 
-// 初始化连接
+// 初始化连接（异步，不阻塞导出）
 testConnection();
 
-// 导出连接池或内存查询
+// 包装一个代理层，按需在每次调用时选择真实数据库或内存数据库
+const poolWrapper = {
+  execute: async (query, params = []) => {
+    // 若内存库已准备，直接走内存库
+    if (global.memoryDB) {
+      return memoryQuery.execute(query, params);
+    }
+    try {
+      return await pool.execute(query, params);
+    } catch (error) {
+      // 数据库不可用时，自动降级到内存库，保证线上不会 500
+      console.error('数据库执行失败，自动降级到内存存储:', error.message);
+      if (!global.memoryDB) {
+        // 初始化一个最小的内存库（与 testConnection 中一致）
+        global.memoryDB = { users: [] };
+      }
+      return memoryQuery.execute(query, params);
+    }
+  }
+};
+
 module.exports = {
-  pool: global.memoryDB ? memoryQuery : pool,
+  pool: poolWrapper,
   testConnection
 };
