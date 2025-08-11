@@ -11,10 +11,15 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [showHelp, setShowHelp] = useState(false);
+  // 排行榜默认显示在左下角（组件内部 fixed 定位）
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsSubmitting(true);
 
     try {
       const data = await authAPI.login(username, password);
@@ -37,121 +42,61 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     } catch (error: any) {
       console.error('登录请求错误:', error);
       setError(error.message || '网络错误，请重试');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <>
-      <LeaderBoard position="login" />
-      <form className="login-form-bg" onSubmit={handleLogin}>
-      <h2>班前学习监督系统</h2>
-      <input
-        type="text"
-        placeholder="用户名"
-        value={username}
-        onChange={e => setUsername(e.target.value)}
-        autoComplete="username"
-        style={{
-          width: '100%',
-          marginBottom: 16,
-          padding: 12,
-          borderRadius: 8,
-          border: 'none',
-          fontSize: 18,
-          background: '#fff2',
-          color: '#fff'
-        }}
-      />
-      <input
-        type="password"
-        placeholder="密码"
-        value={password}
-        onChange={e => setPassword(e.target.value)}
-        autoComplete="current-password"
-        style={{
-          width: '100%',
-          marginBottom: 18,
-          padding: 12,
-          borderRadius: 8,
-          border: 'none',
-          fontSize: 18,
-          background: '#fff2',
-          color: '#fff'
-        }}
-      />
-      {error && (
-        <div style={{
-          color: '#ff6b6b',
-          marginBottom: 16,
-          textAlign: 'center',
-          fontSize: 14
-        }}>
-          {error}
+      <LeaderBoard />
+      <div className="split-hero">
+        <div className="split-left">
+          <div className="welcome-big">欢迎使用</div>
+          <div className="welcome-small">班前学习系统</div>
         </div>
-      )}
-      <button
-        type="submit"
-        style={{
-          width: '100%',
-          padding: 12,
-          borderRadius: 8,
-          background: 'linear-gradient(90deg,#409eff 60%,#2b8cff 100%)',
-          color: '#fff',
-          fontSize: 18,
-          border: 'none',
-          marginBottom: 16,
-          fontWeight: 500,
-          cursor: 'pointer'
-        }}
-      >
-        登录
-      </button>
-      
-      {/* 忘记密码和注册链接 */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        marginBottom: 20,
-        fontSize: 14
-      }}>
-        <Link 
-          to="/forgot-password"
-          style={{ 
-            color: '#fff9', 
-            textDecoration: 'none',
-            transition: 'color 0.3s ease'
-          }}
-          onMouseEnter={(e) => e.target.style.color = '#fff'}
-          onMouseLeave={(e) => e.target.style.color = '#fff9'}
-        >
-          忘记密码？
-        </Link>
-        <Link 
-          to="/register"
-          style={{ 
-            color: '#fff9', 
-            textDecoration: 'none',
-            transition: 'color 0.3s ease'
-          }}
-          onMouseEnter={(e) => e.target.style.color = '#fff'}
-          onMouseLeave={(e) => e.target.style.color = '#fff9'}
-        >
-          注册账户
-        </Link>
+
+        <form className="login-form-bg split-right" onSubmit={handleLogin}>
+          <div className="input-wrap">
+            <input aria-label="用户名" type="text" placeholder="用户名" value={username} onChange={e => setUsername(e.target.value)} autoComplete="username" className="login-input" />
+          </div>
+          <div className="input-wrap">
+            <input aria-label="密码" type="password" placeholder="密码" value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" className="login-input" />
+          </div>
+          {error && (
+            <div style={{ color: '#ff6b6b', marginBottom: 16, textAlign: 'center', fontSize: 14 }}>{error}</div>
+          )}
+          <button type="submit" className="primary-btn" disabled={isSubmitting}>{isSubmitting ? '登录中…' : '登录'}</button>
+          <div className="links-center-row">
+            <Link to="/forgot-password" className="subtle-center-link">忘记密码？</Link>
+          </div>
+          <Link to="/register" className="secondary-btn">创建账户 →</Link>
+          <div className="sub-actions">
+            <button type="button" className="help-trigger" onClick={() => setShowHelp(true)}>❓ 帮助/说明</button>
+            <small style={{color:'#9db4ff', opacity:.8}}>已加密传输</small>
+          </div>
+          {showHelp && (
+            <div className="help-drawer" role="dialog" aria-modal="true">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <strong>帮助与说明</strong>
+                <button type="button" className="muted-link" onClick={() => setShowHelp(false)}>关闭 ✕</button>
+              </div>
+              <div style={{ fontSize: 12, lineHeight: 1.6 }}>
+                如需体验，可使用测试账号登录（统一密码 123456）：
+                <div style={{ marginTop: 6 }}>
+                  <div>系统管理员：admin</div>
+                  <div>维护人员：maintenance</div>
+                  <div>普通用户：user</div>
+                  <div>测试管理员：testadmin</div>
+                </div>
+                <div style={{ marginTop: 8 }}>
+                  <small>提示：正式环境请关闭测试账号并开启强密码策略。</small>
+                </div>
+              </div>
+            </div>
+          )}
+        </form>
       </div>
-      
-      <div style={{ color: '#fff8', fontSize: 12, textAlign: 'center', marginTop: 8 }}>
-        <div style={{ fontSize: 10, opacity: 0.7, marginTop: 8, padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)' }}>
-          <div style={{ marginBottom: 4, fontWeight: 'bold', color: '#ff9800' }}>🔑 测试账号（统一密码）</div>
-          <div style={{ marginBottom: 2, color: '#f44336' }}>👑 <strong>系统管理员</strong>: admin / 123456</div>
-          <div style={{ marginBottom: 2, color: '#2196f3' }}>🔧 <strong>维护人员</strong>: maintenance / 123456</div>
-          <div style={{ marginBottom: 2, color: '#4caf50' }}>👤 <strong>普通用户</strong>: user / 123456</div>
-          <div style={{ color: '#9c27b0' }}>👑 <strong>测试管理员</strong>: testadmin / 123456</div>
-          <div style={{ marginTop: 6, fontSize: 9, opacity: 0.6, fontStyle: 'italic' }}>所有账号密码已统一为 123456，不同角色拥有不同的系统权限</div>
-        </div>
-      </div>
-    </form>
     </>
   );
 };

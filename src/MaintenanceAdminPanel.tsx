@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 // 添加旋转动画样式
 const spinKeyframes = `
@@ -29,6 +30,15 @@ interface MaintenanceAdminPanelProps {
 
 const MaintenanceAdminPanel: React.FC<MaintenanceAdminPanelProps> = ({ user, onLogout }) => {
   const [activeTab, setActiveTab] = useState<'users' | 'maintenance'>('users');
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // URL ?tab=users|maintenance 控制选项卡
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab');
+    if (tab === 'users' || tab === 'maintenance') setActiveTab(tab);
+  }, [location.search]);
 
   // 权限检查
   if (!user || (user.role !== 'maintenance' && user.role !== 'admin')) {
@@ -71,181 +81,44 @@ const MaintenanceAdminPanel: React.FC<MaintenanceAdminPanelProps> = ({ user, onL
 
   return (
     <div style={{
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: '#f5f7fb',
       minHeight: '100vh',
       padding: '20px'
     }}>
-      {/* 顶部导航栏 */}
-      <div style={{
-        background: 'rgba(255, 255, 255, 0.15)',
-        borderRadius: '12px',
-        padding: '15px 25px',
-        marginBottom: '20px',
-        backdropFilter: 'blur(10px)',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        color: '#fff'
-      }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold' }}>
-            🔧 维护人员管理后台
-          </h1>
-          <p style={{ margin: '5px 0 0 0', opacity: 0.8, fontSize: '14px' }}>
-            欢迎，{user.name || user.username} ({user.role === 'admin' ? '系统管理员' : '维护人员'})
-          </p>
-        </div>
+      {/* 右上角返回首页与退出 */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 12 }}>
+        <button
+          onClick={() => navigate('/dashboard')}
+          style={{
+            padding: '8px 14px',
+            background: '#111827',
+            color: '#fff',
+            border: '1px solid #111827',
+            borderRadius: 10,
+            cursor: 'pointer',
+            fontSize: 13,
+            fontWeight: 600
+          }}
+        >
+          返回首页
+        </button>
         <button
           onClick={onLogout}
           style={{
-            padding: '8px 16px',
-            background: 'rgba(255, 71, 87, 0.8)',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '6px',
+            padding: '8px 14px',
+            background: '#fff',
+            color: '#111827',
+            border: '1px solid #e5e7eb',
+            borderRadius: 10,
             cursor: 'pointer',
-            fontSize: '14px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '5px'
+            fontSize: 13,
+            fontWeight: 600
           }}
         >
-          🚪 退出登录
+          退出登录
         </button>
       </div>
-
-      {/* 功能选项卡 */}
-      <div style={{
-        background: 'rgba(255, 255, 255, 0.1)',
-        borderRadius: '12px',
-        padding: '20px',
-        backdropFilter: 'blur(10px)',
-        marginBottom: '20px'
-      }}>
-        <div style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '15px',
-          marginBottom: '25px',
-          borderBottom: '2px solid rgba(255, 255, 255, 0.2)',
-          paddingBottom: '20px',
-          justifyContent: 'center'
-        }}>
-          <button
-            onClick={() => setActiveTab('users')}
-            style={{
-              padding: '15px 30px',
-              background: activeTab === 'users' 
-                ? 'linear-gradient(90deg, #409eff 60%, #2b8cff 100%)' 
-                : 'rgba(255, 255, 255, 0.1)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '25px',
-              cursor: 'pointer',
-              fontSize: '16px',
-              fontWeight: '500',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              transition: 'all 0.3s ease',
-              minWidth: '140px',
-              justifyContent: 'center',
-              boxShadow: activeTab === 'users' ? '0 4px 15px rgba(64, 158, 255, 0.3)' : 'none',
-              transform: activeTab === 'users' ? 'translateY(-2px)' : 'none'
-            }}
-          >
-            👥 用户管理
-          </button>
-          <button
-            onClick={() => setActiveTab('maintenance')}
-            style={{
-              padding: '15px 30px',
-              background: activeTab === 'maintenance' 
-                ? 'linear-gradient(90deg, #409eff 60%, #2b8cff 100%)' 
-                : 'rgba(255, 255, 255, 0.1)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '25px',
-              cursor: 'pointer',
-              fontSize: '16px',
-              fontWeight: '500',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              transition: 'all 0.3s ease',
-              minWidth: '140px',
-              justifyContent: 'center',
-              boxShadow: activeTab === 'maintenance' ? '0 4px 15px rgba(64, 158, 255, 0.3)' : 'none',
-              transform: activeTab === 'maintenance' ? 'translateY(-2px)' : 'none'
-            }}
-          >
-            🛠️ 系统维护
-          </button>
-        </div>
-
-        {/* 功能说明 */}
-        <div style={{
-          background: 'rgba(255, 255, 255, 0.08)',
-          borderRadius: '12px',
-          padding: '20px',
-          color: '#fff',
-          fontSize: '14px',
-          border: '1px solid rgba(255, 255, 255, 0.15)',
-          marginTop: '10px',
-          lineHeight: '1.6'
-        }}>
-          {activeTab === 'users' && (
-            <div>
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '8px', 
-                marginBottom: '15px',
-                fontSize: '16px',
-                fontWeight: 'bold'
-              }}>
-                👥 用户管理功能
-              </div>
-              <ul style={{ 
-                margin: '0', 
-                paddingLeft: '20px',
-                listStyleType: 'disc'
-              }}>
-                <li style={{ marginBottom: '8px' }}>添加、编辑、删除用户账户</li>
-                <li style={{ marginBottom: '8px' }}>设置用户权限和角色</li>
-                <li style={{ marginBottom: '8px' }}>管理用户基本信息</li>
-                <li style={{ marginBottom: '8px' }}>按部门、班组筛选用户</li>
-                <li style={{ marginBottom: '8px' }}>重置用户密码</li>
-              </ul>
-            </div>
-          )}
-          {activeTab === 'maintenance' && (
-            <div>
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '8px', 
-                marginBottom: '15px',
-                fontSize: '16px',
-                fontWeight: 'bold'
-              }}>
-                🛠️ 系统维护功能
-              </div>
-              <ul style={{ 
-                margin: '0', 
-                paddingLeft: '20px',
-                listStyleType: 'disc'
-              }}>
-                <li style={{ marginBottom: '8px' }}>启用/禁用系统维护模式</li>
-                <li style={{ marginBottom: '8px' }}>设置维护原因和详细信息</li>
-                <li style={{ marginBottom: '8px' }}>查看维护历史记录</li>
-                <li style={{ marginBottom: '8px' }}>服务器状态监控</li>
-                <li style={{ marginBottom: '8px' }}>系统健康检查</li>
-              </ul>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* 顶部说明与标签区域已移除（首页可直达） */}
 
       {/* 功能内容区域 */}
       <div style={{
@@ -279,24 +152,12 @@ const MaintenanceAdminPanel: React.FC<MaintenanceAdminPanelProps> = ({ user, onL
           </div>
         }>
           {activeTab === 'users' && (
-            <div style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              borderRadius: '12px',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              overflow: 'hidden'
-            }}>
+            <div style={{ background: 'transparent' }}>
               <UserManagement currentUser={user} />
             </div>
           )}
           {activeTab === 'maintenance' && (
-            <div style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              borderRadius: '12px',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              overflow: 'hidden'
-            }}>
+            <div style={{ background: 'transparent' }}>
               <MaintenancePanel user={user} />
             </div>
           )}

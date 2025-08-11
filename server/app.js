@@ -9,9 +9,17 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // CORS配置
+const parseEnvOrigins = () => {
+  const env = process.env.CORS_ORIGIN || process.env.CORS_ORIGINS || '';
+  return String(env)
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+};
+
 const corsOptions = {
   origin: function (origin, callback) {
-    // 允许的域名列表
+    // 允许的域名列表（支持环境变量追加）
     const allowedOrigins = [
       // 本地
       'http://localhost:3000',
@@ -40,7 +48,8 @@ const corsOptions = {
       'http://116.62.65.246',
       'http://116.62.65.246:3000',
       // Vercel 预览域名
-      'https://learning-platform.vercel.app'
+      'https://learning-platform.vercel.app',
+      ...parseEnvOrigins()
     ];
 
     // 内网穿透服务的域名模式
@@ -79,6 +88,13 @@ const corsOptions = {
     const localhostPattern = /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/;
     if (localhostPattern.test(origin)) {
       console.log('允许localhost端口访问:', origin);
+      return callback(null, true);
+    }
+
+    // 允许常见内网网段（仅限 http，若需 https 也可匹配）
+    const intranetPattern = /^https?:\/\/(10\.(?:\d{1,3}\.){2}\d{1,3}|192\.168\.(?:\d{1,3})\.\d{1,3}|172\.(?:1[6-9]|2\d|3[0-1])\.(?:\d{1,3})\.\d{1,3})(?::\d+)?$/;
+    if (intranetPattern.test(origin)) {
+      console.log('允许内网网段来源:', origin);
       return callback(null, true);
     }
 

@@ -51,26 +51,20 @@ const Register: React.FC = () => {
     }
 
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...formData,
-          role: 'user' // 默认角色为普通用户
-        })
+      const response = await authAPI.register({
+        ...formData,
+        role: 'user'
       });
 
-      const result = await response.json();
+      const result = response;
 
-      if (response.ok) {
+      if (result && result.success) {
         setSuccess('注册成功！3秒后自动跳转到登录页面...');
         setTimeout(() => {
           navigate('/');
         }, 3000);
       } else {
-        setError(result.error || '注册失败，请重试');
+        setError((result && result.error) || '注册失败，请重试');
       }
     } catch (error: any) {
       console.error('注册请求失败:', error);
@@ -86,118 +80,76 @@ const Register: React.FC = () => {
       <form className="login-form-bg" onSubmit={handleSubmit} style={{ maxWidth: '400px', margin: '0 auto' }}>
         <h2 style={{ textAlign: 'center', marginBottom: '30px', color: '#fff' }}>用户注册</h2>
         
-        <input
-          type="text"
-          name="username"
-          placeholder="用户名 *"
-          value={formData.username}
-          onChange={handleChange}
-          required
-          minLength={3}
-          style={{
-            width: '100%',
-            marginBottom: 16,
-            padding: 12,
-            borderRadius: 8,
-            border: 'none',
-            fontSize: 16,
-            background: '#fff2',
-            color: '#fff'
-          }}
-        />
-        
-        <input
-          type="password"
-          name="password"
-          placeholder="密码 *（至少6位）"
-          value={formData.password}
-          onChange={handleChange}
-          required
-          minLength={6}
-          style={{
-            width: '100%',
-            marginBottom: 16,
-            padding: 12,
-            borderRadius: 8,
-            border: 'none',
-            fontSize: 16,
-            background: '#fff2',
-            color: '#fff'
-          }}
-        />
-        
-        <input
-          type="text"
-          name="name"
-          placeholder="真实姓名 *"
-          value={formData.name}
-          onChange={handleChange}
-          required
-          style={{
-            width: '100%',
-            marginBottom: 16,
-            padding: 12,
-            borderRadius: 8,
-            border: 'none',
-            fontSize: 16,
-            background: '#fff2',
-            color: '#fff'
-          }}
-        />
-        
-        <input
-          type="email"
-          name="email"
-          placeholder="邮箱地址"
-          value={formData.email}
-          onChange={handleChange}
-          style={{
-            width: '100%',
-            marginBottom: 16,
-            padding: 12,
-            borderRadius: 8,
-            border: 'none',
-            fontSize: 16,
-            background: '#fff2',
-            color: '#fff'
-          }}
-        />
-        
-        <input
-          type="tel"
-          name="phone"
-          placeholder="手机号"
-          value={formData.phone}
-          onChange={handleChange}
-          style={{
-            width: '100%',
-            marginBottom: 16,
-            padding: 12,
-            borderRadius: 8,
-            border: 'none',
-            fontSize: 16,
-            background: '#fff2',
-            color: '#fff'
-          }}
-        />
-        
-        <input
-          type="text"
-          name="department"
-          placeholder="部门"
-          value={formData.department}
-          onChange={handleChange}
-          style={{
-            width: '100%',
-            marginBottom: 20,
-            padding: 12,
-            borderRadius: 8,
-            border: 'none',
-            fontSize: 16,
-            background: '#fff2',
-            color: '#fff'
-          }}
-        />
+        <div className="input-wrap">
+          <input
+            type="text"
+            name="username"
+            placeholder="用户名 *"
+            value={formData.username}
+            onChange={handleChange}
+            required
+            minLength={3}
+            className="login-input"
+          />
+        </div>
+
+        <div className="input-wrap">
+          <input
+            type="password"
+            name="password"
+            placeholder="密码 *（至少6位）"
+            value={formData.password}
+            onChange={handleChange}
+            required
+            minLength={6}
+            className="login-input"
+          />
+        </div>
+
+        <div className="input-wrap">
+          <input
+            type="text"
+            name="name"
+            placeholder="真实姓名 *"
+            value={formData.name}
+            onChange={handleChange}
+            required
+            className="login-input"
+          />
+        </div>
+
+        <div className="input-wrap">
+          <input
+            type="email"
+            name="email"
+            placeholder="邮箱地址"
+            value={formData.email}
+            onChange={handleChange}
+            className="login-input"
+          />
+        </div>
+
+        <div className="input-wrap">
+          <input
+            type="tel"
+            name="phone"
+            placeholder="手机号"
+            value={formData.phone}
+            onChange={handleChange}
+            className="login-input"
+          />
+        </div>
+
+        <div className="input-wrap">
+          <input
+            type="text"
+            name="department"
+            placeholder="部门"
+            value={formData.department}
+            onChange={handleChange}
+            className="login-input"
+          />
+        </div>
 
         {error && (
           <div style={{
@@ -229,24 +181,7 @@ const Register: React.FC = () => {
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={isLoading}
-          style={{
-            width: '100%',
-            padding: 12,
-            borderRadius: 8,
-            background: isLoading 
-              ? 'rgba(64, 158, 255, 0.6)' 
-              : 'linear-gradient(90deg,#409eff 60%,#2b8cff 100%)',
-            color: '#fff',
-            fontSize: 18,
-            border: 'none',
-            marginBottom: 16,
-            fontWeight: 500,
-            cursor: isLoading ? 'not-allowed' : 'pointer'
-          }}
-        >
+        <button type="submit" disabled={isLoading} className="primary-btn">
           {isLoading ? '注册中...' : '注册账户'}
         </button>
 

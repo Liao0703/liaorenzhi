@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 
 import { getAllArticles, updateArticle, addArticle, deleteArticle, syncFromCloud, syncToCloud } from './articleData';
@@ -41,6 +41,17 @@ interface UserRecord {
 const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'articles' | 'statistics' | 'photos' | 'settings'>('overview');
+  const location = useLocation();
+
+  // 根据 URL 查询参数 tab 同步选中的标签
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get('tab') as typeof activeTab | null;
+    const allowedTabs = new Set(['overview','users','articles','statistics','photos','settings']);
+    if (tabParam && allowedTabs.has(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [location.search]);
   const [showServerConfig, setShowServerConfig] = useState(false);
   const [showStoragePanel, setShowStoragePanel] = useState(false);
   const [showFileUpload, setShowFileUpload] = useState(false);
@@ -201,6 +212,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
 
   // 文章分类
   const categories = ['安全规程', '设备维护', '应急处理', '信号系统', '调度规范', '作业标准'];
+
+  // 轻量卡片与子卡片通用样式（对齐新概览风格）
+  const lightCard: React.CSSProperties = {
+    background: '#fff',
+    border: '1px solid #eef0f4',
+    borderRadius: 12,
+    boxShadow: '0 6px 24px rgba(17, 24, 39, 0.06)'
+  };
+  const subCard: React.CSSProperties = {
+    background: '#f8fafc',
+    border: '1px solid #eef2f7',
+    borderRadius: 8
+  };
 
   // 格式化字节数（暂时未使用）
   // const formatBytes = (bytes: number): string => {
@@ -402,80 +426,30 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
 
 
   return (
-    <div style={{ 
+      <div style={{ 
       position: 'relative', 
       zIndex: 10, 
       padding: '20px',
-      color: '#fff',
+      color: '#111827',
       minHeight: '100vh'
     }}>
-      {/* 顶部导航 */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '30px',
-        padding: '20px',
-        background: 'rgba(0,0,0,0.3)',
-        borderRadius: '12px',
-        backdropFilter: 'blur(10px)'
-      }}>
-        <h2 style={{ margin: 0, fontSize: '24px' }}>管理后台</h2>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button
-            onClick={() => navigate('/dashboard')}
-            style={{
-              padding: '10px 20px',
-              background: 'rgba(255,255,255,0.2)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '14px'
-            }}
-          >
-            返回首页
-          </button>
-        </div>
-      </div>
-
-      {/* 标签页导航 */}
-      <div style={{
-        display: 'flex',
-        gap: '5px',
-        marginBottom: '20px',
-        background: 'rgba(0,0,0,0.3)',
-        padding: '5px',
-        borderRadius: '8px',
-        backdropFilter: 'blur(10px)'
-      }}>
-        {[
-          { key: 'overview', label: '总览' },
-          { key: 'users', label: '学习记录' },
-          { key: 'articles', label: '文章管理' },
-          { key: 'statistics', label: '统计分析' },
-          { key: 'photos', label: '照片管理' },
-          { key: 'settings', label: '系统设置' }
-        ].map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key as any)}
-            style={{
-              padding: '10px 20px',
-              background: activeTab === tab.key 
-                ? 'linear-gradient(90deg,#409eff 60%,#2b8cff 100%)' 
-                : 'transparent',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              transition: 'all 0.3s ease'
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* 右上角返回首页 */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+        <button
+          onClick={() => navigate('/dashboard')}
+          style={{
+            padding: '8px 14px',
+            background: '#111827',
+            color: '#fff',
+            border: '1px solid #111827',
+            borderRadius: 10,
+            cursor: 'pointer',
+            fontSize: 13,
+            fontWeight: 600
+          }}
+        >
+          返回首页
+        </button>
       </div>
 
       {/* 总览页面 */}
@@ -577,30 +551,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
 
       {/* 学习记录管理页面 */}
       {activeTab === 'users' && (
-        <div style={{
-          background: 'rgba(0,0,0,0.3)',
-          padding: '20px',
-          borderRadius: '12px',
-          backdropFilter: 'blur(10px)'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div style={{ ...lightCard, padding: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <h3 style={{ margin: 0, fontSize: '18px' }}>学习记录管理</h3>
             <button
               onClick={exportLearningRecordsToExcel}
               style={{
-                padding: '8px 18px',
-                background: 'linear-gradient(90deg,#67c23a 60%,#5daf34 100%)',
+                padding: '8px 14px',
+                background: '#111827',
                 color: '#fff',
-                border: 'none',
-                borderRadius: '8px',
+                border: '1px solid #111827',
+                borderRadius: '10px',
                 cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: 500,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.3s ease',
-                boxShadow: '0 2px 8px rgba(103, 194, 58, 0.3)'
+                fontSize: '13px',
+                fontWeight: 600
               }}
               onMouseOver={(e) => {
                 e.currentTarget.style.transform = 'translateY(-1px)';
@@ -617,28 +581,27 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
 
           {/* 筛选器 */}
           <div style={{
-            background: 'rgba(255,255,255,0.1)',
-            padding: '15px',
-            borderRadius: '8px',
-            marginBottom: '20px',
+            ...subCard,
+            padding: 15,
+            marginBottom: 16,
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            gap: '15px'
+            gap: 12
           }}>
             <div>
               <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: '#fff' }}>单位筛选</label>
               <select
                 value={unitFilter}
                 onChange={e => setUnitFilter(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  background: 'rgba(255,255,255,0.2)',
-                  color: '#fff',
-                  fontSize: '14px'
-                }}
+                 style={{
+                   width: '100%',
+                   padding: 8,
+                   borderRadius: 8,
+                   border: '1px solid #e5e7eb',
+                   background: '#fff',
+                   color: '#111827',
+                   fontSize: 14
+                 }}
               >
                 <option value="">全部单位</option>
                 {units.map(unit => (
@@ -652,15 +615,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
               <select
                 value={departmentFilter}
                 onChange={e => setDepartmentFilter(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  background: 'rgba(255,255,255,0.2)',
-                  color: '#fff',
-                  fontSize: '14px'
-                }}
+                 style={{
+                   width: '100%',
+                   padding: 8,
+                   borderRadius: 8,
+                   border: '1px solid #e5e7eb',
+                   background: '#fff',
+                   color: '#111827',
+                   fontSize: 14
+                 }}
               >
                 <option value="">全部部门</option>
                 {departments.map(dept => (
@@ -674,15 +637,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
               <select
                 value={teamFilter}
                 onChange={e => setTeamFilter(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  background: 'rgba(255,255,255,0.2)',
-                  color: '#fff',
-                  fontSize: '14px'
-                }}
+                 style={{
+                   width: '100%',
+                   padding: 8,
+                   borderRadius: 8,
+                   border: '1px solid #e5e7eb',
+                   background: '#fff',
+                   color: '#111827',
+                   fontSize: 14
+                 }}
               >
                 <option value="">全部班组</option>
                 {teams.map(team => (
@@ -696,15 +659,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
               <select
                 value={jobTypeFilter}
                 onChange={e => setJobTypeFilter(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  background: 'rgba(255,255,255,0.2)',
-                  color: '#fff',
-                  fontSize: '14px'
-                }}
+                 style={{
+                   width: '100%',
+                   padding: 8,
+                   borderRadius: 8,
+                   border: '1px solid #e5e7eb',
+                   background: '#fff',
+                   color: '#111827',
+                   fontSize: 14
+                 }}
               >
                 <option value="">全部工种</option>
                 {jobTypes.map(jobType => (
@@ -737,9 +700,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
           </div>
 
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px', overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#fff', border: '1px solid #eef0f4', borderRadius: 8, overflow: 'hidden', boxShadow: '0 4px 16px rgba(17,24,39,0.06)' }}>
               <thead>
-                <tr style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
+                 <tr style={{ backgroundColor: '#f8fafc' }}>
                   <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '14px' }}>工号</th>
                   <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '14px' }}>姓名</th>
                   <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '14px' }}>单位</th>
@@ -763,69 +726,74 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
                   });
 
                   return filteredUsers.map(user => (
-                    <tr key={user.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                    <tr key={user.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                       <td style={{ padding: '8px', fontSize: '14px' }}>
                         <code style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px', fontSize: '12px' }}>
                           {user.employeeId}
                         </code>
                       </td>
-                      <td style={{ padding: '8px', fontSize: '14px', fontWeight: '500' }}>{user.name}</td>
+                       <td style={{ padding: '8px', fontSize: '14px', fontWeight: 600 }}>{user.name}</td>
                       <td style={{ padding: '8px', fontSize: '14px' }}>
-                        <span style={{
-                          background: 'rgba(230, 162, 60, 0.2)',
-                          color: '#e6a23c',
-                          padding: '2px 8px',
-                          borderRadius: '12px',
-                          fontSize: '12px'
-                        }}>
+                         <span style={{
+                           background: '#fff7ed',
+                           color: '#d97706',
+                           padding: '2px 8px',
+                           borderRadius: 12,
+                           fontSize: 12,
+                           border: '1px solid #fde68a'
+                         }}>
                           {user.unit}
                         </span>
                       </td>
                       <td style={{ padding: '8px', fontSize: '14px' }}>{user.department}</td>
                       <td style={{ padding: '8px', fontSize: '14px' }}>
-                        <span style={{
-                          background: 'rgba(64, 158, 255, 0.2)',
-                          color: '#409eff',
-                          padding: '2px 8px',
-                          borderRadius: '12px',
-                          fontSize: '12px'
-                        }}>
+                         <span style={{
+                           background: '#eff6ff',
+                           color: '#2563eb',
+                           padding: '2px 8px',
+                           borderRadius: 12,
+                           fontSize: 12,
+                           border: '1px solid #bfdbfe'
+                         }}>
                           {user.team}
                         </span>
                       </td>
                       <td style={{ padding: '8px', fontSize: '14px' }}>
-                        <span style={{
-                          background: 'rgba(103, 194, 58, 0.2)',
-                          color: '#67c23a',
-                          padding: '2px 8px',
-                          borderRadius: '12px',
-                          fontSize: '12px'
-                        }}>
+                         <span style={{
+                           background: '#ecfdf5',
+                           color: '#059669',
+                           padding: '2px 8px',
+                           borderRadius: 12,
+                           fontSize: 12,
+                           border: '1px solid #a7f3d0'
+                         }}>
                           {user.jobType}
                         </span>
                       </td>
                       <td style={{ padding: '8px', fontSize: '14px' }}>{user.completedArticles}</td>
-                      <td style={{ padding: '8px', fontSize: '14px' }}>{user.totalStudyTime}分钟</td>
+                       <td style={{ padding: '8px', fontSize: '14px', color: '#334155' }}>{user.totalStudyTime}分钟</td>
                       <td style={{ padding: '8px', fontSize: '14px' }}>
-                        <span style={{
-                          background: user.averageScore >= 90 ? '#67c23a' : user.averageScore >= 80 ? '#e6a23c' : '#f56c6c',
-                          color: '#fff',
-                          padding: '2px 8px',
-                          borderRadius: '12px',
-                          fontSize: '12px'
-                        }}>
+                         <span style={{
+                           background: user.averageScore >= 90 ? '#ecfdf5' : user.averageScore >= 80 ? '#fff7ed' : '#fee2e2',
+                           color: user.averageScore >= 90 ? '#059669' : user.averageScore >= 80 ? '#d97706' : '#b91c1c',
+                           border: `1px solid ${user.averageScore >= 90 ? '#a7f3d0' : user.averageScore >= 80 ? '#fde68a' : '#fecaca'}`,
+                           padding: '2px 8px',
+                           borderRadius: 12,
+                           fontSize: 12
+                         }}>
                           {user.averageScore}分
                         </span>
                       </td>
-                      <td style={{ padding: '8px', fontSize: '14px' }}>{user.lastStudyTime}</td>
+                       <td style={{ padding: '8px', fontSize: '14px', color: '#64748b' }}>{user.lastStudyTime}</td>
                       <td style={{ padding: '8px', fontSize: '14px' }}>
-                        <span style={{
-                          padding: '4px 8px',
-                          background: user.status === 'active' ? '#67c23a' : '#909399',
-                          color: '#fff',
-                          borderRadius: '4px',
-                          fontSize: '12px'
-                        }}>
+                         <span style={{
+                           padding: '4px 8px',
+                           background: user.status === 'active' ? '#ecfdf5' : '#f1f5f9',
+                           color: user.status === 'active' ? '#059669' : '#64748b',
+                           borderRadius: 6,
+                           border: `1px solid ${user.status === 'active' ? '#a7f3d0' : '#e2e8f0'}`,
+                           fontSize: 12
+                         }}>
                           {user.status === 'active' ? '活跃' : '非活跃'}
                         </span>
                       </td>
@@ -859,25 +827,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
 
       {/* 文章管理页面 */}
       {activeTab === 'articles' && (
-        <div style={{
-          background: 'rgba(0,0,0,0.3)',
-          padding: '20px',
-          borderRadius: '12px',
-          backdropFilter: 'blur(10px)'
-        }}>
+        <div style={{ ...lightCard, padding: 20 }}>
           <h3 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>文章内容管理</h3>
-          <div style={{ display: 'flex', gap: '10px', marginBottom: '15px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
             <button
               onClick={handleAdd}
               style={{
-                padding: '8px 18px',
-                background: 'linear-gradient(90deg,#409eff 60%,#2b8cff 100%)',
+                padding: '8px 14px',
+                background: '#111827',
                 color: '#fff',
-                border: 'none',
-                borderRadius: '8px',
+                border: '1px solid #111827',
+                borderRadius: 10,
                 cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: 500
+                fontSize: 13,
+                fontWeight: 600
               }}
             >
               ➕ 添加文章
@@ -885,14 +848,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
             <button
               onClick={() => setShowFileUpload(true)}
               style={{
-                padding: '8px 18px',
-                background: 'linear-gradient(90deg,#67c23a 60%,#5daf34 100%)',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '8px',
+                padding: '8px 14px',
+                background: '#fff',
+                color: '#111827',
+                border: '1px solid #e5e7eb',
+                borderRadius: 10,
                 cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: 500
+                fontSize: 13,
+                fontWeight: 600
               }}
             >
               📄 上传文件
@@ -911,16 +874,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
                   alert(`同步失败: ${error instanceof Error ? error.message : '未知错误'}`);
                 }
               }}
-              style={{
-                padding: '8px 18px',
-                background: 'linear-gradient(90deg,#e6a23c 60%,#f3d19e 100%)',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: 500
-              }}
+              style={{ padding: '8px 14px', background: '#fff', color: '#111827', border: '1px solid #e5e7eb', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
             >
               ⬇️ 从云端同步
             </button>
@@ -939,16 +893,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
                   alert(`同步失败: ${error instanceof Error ? error.message : '未知错误'}`);
                 }
               }}
-              style={{
-                padding: '8px 18px',
-                background: 'linear-gradient(90deg,#f56c6c 60%,#fab6b6 100%)',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: 500
-              }}
+              style={{ padding: '8px 14px', background: '#fff', color: '#111827', border: '1px solid #e5e7eb', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
             >
               ⬆️ 同步到云端
             </button>
@@ -975,14 +920,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
                       <button
                         onClick={() => handleEdit(article)}
                         style={{
-                          marginRight: '10px',
-                          padding: '4px 12px',
-                          background: 'linear-gradient(90deg,#e6a23c 60%,#f3d19e 100%)',
-                          color: '#fff',
-                          border: 'none',
-                          borderRadius: '6px',
+                          marginRight: 8,
+                          padding: '6px 12px',
+                          background: '#fff',
+                          color: '#111827',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: 8,
                           cursor: 'pointer',
-                          fontSize: '12px'
+                          fontSize: 12,
+                          fontWeight: 600
                         }}
                       >
                         编辑
@@ -990,13 +936,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
                       <button
                         onClick={() => handleDelete(article.id)}
                         style={{
-                          padding: '4px 12px',
-                          background: 'linear-gradient(90deg,#f56c6c 60%,#fab6b6 100%)',
+                          padding: '6px 12px',
+                          background: '#111827',
                           color: '#fff',
-                          border: 'none',
-                          borderRadius: '6px',
+                          border: '1px solid #111827',
+                          borderRadius: 8,
                           cursor: 'pointer',
-                          fontSize: '12px'
+                          fontSize: 12,
+                          fontWeight: 600
                         }}
                       >
                         删除
@@ -1393,53 +1340,27 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
       {/* 统计分析页面 */}
       {activeTab === 'statistics' && (
         <div>
-          <div style={{
-            background: 'rgba(0,0,0,0.3)',
-            padding: '20px',
-            borderRadius: '12px',
-            backdropFilter: 'blur(10px)',
-            marginBottom: '20px'
-          }}>
-            <h3 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>学习趋势分析</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#409eff' }}>87%</div>
-                <div style={{ fontSize: '14px', opacity: 0.8 }}>平均完成率</div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#67c23a' }}>84分</div>
-                <div style={{ fontSize: '14px', opacity: 0.8 }}>平均成绩</div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#e6a23c' }}>32分钟</div>
-                <div style={{ fontSize: '14px', opacity: 0.8 }}>平均学习时长</div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#f56c6c' }}>72%</div>
-                <div style={{ fontSize: '14px', opacity: 0.8 }}>活跃用户比例</div>
-              </div>
+          {/* KPI 概览 */}
+          <div style={{ ...lightCard, padding: 20, marginBottom: 16 }}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '18px' }}>学习统计</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+              {[{label:'平均完成率', value:'87%', color:'#4f46e5'}, {label:'平均成绩', value:'84分', color:'#059669'}, {label:'平均学习时长', value:'32分钟', color:'#d97706'}, {label:'活跃用户比例', value:'72%', color:'#b91c1c'}].map((kpi) => (
+                <div key={kpi.label} style={{ ...subCard, padding: 16, textAlign: 'center' }}>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: kpi.color }}>{kpi.value}</div>
+                  <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>{kpi.label}</div>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div style={{
-            background: 'rgba(0,0,0,0.3)',
-            padding: '20px',
-            borderRadius: '12px',
-            backdropFilter: 'blur(10px)'
-          }}>
-            <h3 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>分类学习情况</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px' }}>
+          {/* 分类学习情况 */}
+          <div style={{ ...lightCard, padding: 20 }}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '18px' }}>分类学习情况</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
               {['安全规程', '设备维护', '应急处理', '信号系统', '调度规范', '作业标准'].map(category => (
-                <div key={category} style={{
-                  background: 'rgba(255,255,255,0.1)',
-                  padding: '15px',
-                  borderRadius: '8px',
-                  textAlign: 'center'
-                }}>
-                  <div style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '5px' }}>{category}</div>
-                  <div style={{ fontSize: '14px', opacity: 0.8 }}>
-                    {Math.floor(Math.random() * 20) + 10} 人学习
-                  </div>
+                <div key={category} style={{ ...subCard, padding: 16, textAlign: 'center' }}>
+                  <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>{category}</div>
+                  <div style={{ fontSize: 13, color: '#6b7280' }}>{Math.floor(Math.random() * 20) + 10} 人学习</div>
                 </div>
               ))}
             </div>
@@ -1449,21 +1370,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
 
       {/* 照片管理页面 */}
       {activeTab === 'photos' && (
-        <div style={{
-          background: 'rgba(0,0,0,0.3)',
-          padding: '20px',
-          borderRadius: '12px',
-          backdropFilter: 'blur(10px)'
-        }}>
+        <div style={{ ...lightCard, padding: 20 }}>
           <h3 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>📷 学习监控照片管理</h3>
           
           {/* 照片统计 */}
-          <div style={{
-            background: 'rgba(255,255,255,0.1)',
-            padding: '20px',
-            borderRadius: '8px',
-            marginBottom: '20px'
-          }}>
+          <div style={{ ...subCard, padding: 20, marginBottom: 16 }}>
             <h4 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>照片统计</h4>
             {(() => {
               const stats = getPhotoStats();
@@ -1483,12 +1394,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
           </div>
 
           {/* 照片列表 */}
-          <div style={{
-            background: 'rgba(255,255,255,0.1)',
-            padding: '20px',
-            borderRadius: '8px',
-            marginBottom: '20px'
-          }}>
+          <div style={{ ...subCard, padding: 20, marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
               <h4 style={{ margin: 0, fontSize: '16px' }}>最近照片</h4>
               <div style={{ display: 'flex', gap: '10px' }}>
@@ -1571,25 +1477,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
 
       {/* 系统设置页面 */}
       {activeTab === 'settings' && (
-        <div style={{
-          background: 'rgba(0,0,0,0.3)',
-          padding: '20px',
-          borderRadius: '12px',
-          backdropFilter: 'blur(10px)'
-        }}>
+        <div style={{ ...lightCard, padding: 20 }}>
           <h3 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>系统设置</h3>
           
           {/* 摄像头设置 */}
-          <div style={{
-            background: 'rgba(255,255,255,0.1)',
-            padding: '20px',
-            borderRadius: '8px',
-            marginBottom: '20px'
-          }}>
+          <div style={{ ...subCard, padding: 20, marginBottom: 16 }}>
             <h4 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>📷 摄像头监控设置</h4>
             
             {/* 基础拍照间隔设置 */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 15, marginBottom: 20 }}>
               <label style={{ fontSize: '14px' }}>
                 拍照间隔：
                 <input
@@ -1599,11 +1495,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
                   value={cameraInterval}
                   onChange={(e) => setCameraInterval(parseInt(e.target.value) || 30)}
                   style={{
-                    marginLeft: '10px',
-                    padding: '8px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    width: '80px'
+                    marginLeft: 10,
+                    padding: 8,
+                    borderRadius: 8,
+                    border: '1px solid #e5e7eb',
+                    width: 90
                   }}
                 />
                 秒
@@ -1611,8 +1507,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
             </div>
 
             {/* 随机拍摄设置 */}
-            <div style={{ marginBottom: '20px', padding: '15px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
+            <div style={{ ...subCard, padding: 15, marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 15, marginBottom: 10 }}>
                 <label style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <input
                     type="checkbox"
@@ -1632,11 +1528,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
                       value={randomCaptureCount}
                       onChange={(e) => setRandomCaptureCount(parseInt(e.target.value) || 3)}
                       style={{
-                        marginLeft: '10px',
-                        padding: '6px',
-                        borderRadius: '4px',
-                        border: 'none',
-                        width: '60px'
+                        marginLeft: 10,
+                        padding: 6,
+                        borderRadius: 8,
+                        border: '1px solid #e5e7eb',
+                        width: 70
                       }}
                     />
                     张
@@ -1654,8 +1550,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
             </div>
 
             {/* 防代学功能设置 */}
-            <div style={{ marginBottom: '20px', padding: '15px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' }}>
+            <div style={{ ...subCard, padding: 15, marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 15, marginBottom: 10 }}>
                 <label style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <input
                     type="checkbox"
@@ -1689,13 +1585,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
                   alert(`摄像头设置已保存！\n拍照间隔: ${cameraInterval}秒\n随机拍摄: ${enableRandomCapture ? '启用' : '关闭'}${enableRandomCapture ? `(${randomCaptureCount}张)` : ''}\n防代学功能: ${enableAntiCheating ? '启用' : '关闭'}`);
                 }}
                 style={{
-                  padding: '8px 16px',
-                  background: 'linear-gradient(90deg,#409eff 60%,#2b8cff 100%)',
+                  padding: '8px 14px',
+                  background: '#111827',
                   color: '#fff',
-                  border: 'none',
-                  borderRadius: '6px',
+                  border: '1px solid #111827',
+                  borderRadius: 10,
                   cursor: 'pointer',
-                  fontSize: '14px'
+                  fontSize: 13,
+                  fontWeight: 600
                 }}
               >
                 保存设置
@@ -1714,12 +1611,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
           </div>
 
           {/* 阅读时间设置 */}
-          <div style={{
-            background: 'rgba(255,255,255,0.1)',
-            padding: '20px',
-            borderRadius: '8px',
-            marginBottom: '20px'
-          }}>
+          <div style={{ ...subCard, padding: 20, marginBottom: 16 }}>
             <h4 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>⏱️ 阅读时间设置</h4>
             <p style={{ 
               margin: '0 0 15px 0', 
@@ -1747,12 +1639,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
           </div>
 
           {/* 数据管理 */}
-          <div style={{
-            background: 'rgba(255,255,255,0.1)',
-            padding: '20px',
-            borderRadius: '8px',
-            marginBottom: '20px'
-          }}>
+          <div style={{ ...subCard, padding: 20, marginBottom: 16 }}>
             <h4 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>💾 数据管理</h4>
             {(() => {
               const systemData = getAllSystemData();
@@ -1767,18 +1654,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
                 </div>
               );
             })()}
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <button
                 onClick={backupData}
-                style={{
-                  padding: '8px 16px',
-                  background: 'linear-gradient(90deg,#67c23a 60%,#5daf34 100%)',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '14px'
-                }}
+                style={{ padding: '8px 14px', background: '#fff', color: '#111827', border: '1px solid #e5e7eb', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
               >
                 备份所有数据
               </button>
@@ -1789,15 +1668,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
                     clearAllData();
                   }
                 }}
-                style={{
-                  padding: '8px 16px',
-                  background: 'linear-gradient(90deg,#f56c6c 60%,#fab6b6 100%)',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '14px'
-                }}
+                style={{ padding: '8px 14px', background: '#111827', color: '#fff', border: '1px solid #111827', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
               >
                 清空所有数据
               </button>
@@ -1805,12 +1676,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
           </div>
 
           {/* 存储详情 */}
-          <div style={{
-            background: 'rgba(255,255,255,0.1)',
-            padding: '20px',
-            borderRadius: '8px',
-            marginBottom: '20px'
-          }}>
+          <div style={{ ...subCard, padding: 20, marginBottom: 16 }}>
             <h4 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>📊 存储详情</h4>
             {(() => {
               const storageData = getLearningStorageData();
@@ -1846,12 +1712,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
           </div>
 
           {/* 云服务器存储 */}
-          <div style={{
-            background: 'rgba(255,255,255,0.1)',
-            padding: '20px',
-            borderRadius: '8px',
-            marginBottom: '20px'
-          }}>
+          <div style={{ ...subCard, padding: 20, marginBottom: 16 }}>
             <h4 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>🗄️ 云服务器存储</h4>
                 <div style={{ fontSize: '14px', lineHeight: '1.6', marginBottom: '15px' }}>
               <p><strong>存储状态：</strong>
@@ -1869,39 +1730,24 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
                 <p><strong>存储类型：</strong>云服务器统一存储</p>
                     </div>
                 </div>
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <button
                 onClick={() => setShowServerConfig(true)}
-                style={{
-                  padding: '8px 16px',
-                  background: 'linear-gradient(90deg,#3b82f6 60%,#2563eb 100%)',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '14px'
-                }}
+                style={{ padding: '8px 14px', background: '#fff', color: '#111827', border: '1px solid #e5e7eb', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
               >
                 🔍 服务器配置
               </button>
               <button
                 onClick={() => setShowStoragePanel(true)}
-                style={{
-                  padding: '8px 16px',
-                  background: 'linear-gradient(90deg,#10b981 60%,#059669 100%)',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '14px'
-                }}
+                style={{ padding: '8px 14px', background: '#fff', color: '#111827', border: '1px solid #e5e7eb', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
               >
                 📁 存储管理
               </button>
               <button
                 onClick={async () => {
                   try {
-                    const response = await fetch('/api/files/health');
+                    const { FILE_API_BASE } = await import('./fileUploadService');
+                    const response = await fetch(`${FILE_API_BASE}/health`);
                     const result = await response.json();
                     if (result.success) {
                       alert('✅ 云服务器存储服务正常运行！');
@@ -1912,15 +1758,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
                     alert(`❌ 连接失败: ${error instanceof Error ? error.message : '未知错误'}`);
                   }
                 }}
-                style={{
-                  padding: '8px 16px',
-                  background: 'linear-gradient(90deg,#f59e0b 60%,#d97706 100%)',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '14px'
-                }}
+                style={{ padding: '8px 14px', background: '#111827', color: '#fff', border: '1px solid #111827', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
               >
                 🔍 状态检查
               </button>
@@ -1928,11 +1766,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ user: _user }) => {
           </div>
 
           {/* 系统信息 */}
-          <div style={{
-            background: 'rgba(255,255,255,0.1)',
-            padding: '20px',
-            borderRadius: '8px'
-          }}>
+          <div style={{ ...subCard, padding: 20 }}>
             <h4 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>ℹ️ 系统信息</h4>
             <div style={{ fontSize: '14px', lineHeight: '1.6' }}>
               <p><strong>系统名称：</strong>班前学习监督系统</p>

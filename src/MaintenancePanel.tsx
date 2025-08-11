@@ -73,51 +73,25 @@ const MaintenancePanel: React.FC<MaintenancePanelProps> = ({ user }) => {
   };
 
   return (
-    <div style={{
-      background: 'transparent',
-      borderRadius: '0',
-      padding: '24px',
-      margin: '0',
-      boxShadow: 'none',
-      backdropFilter: 'none',
-      color: '#fff'
-    }}>
-      <h2 style={{
-        color: '#fff',
-        marginBottom: '20px',
-        fontSize: '24px',
-        fontWeight: 'bold',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '10px',
-        textShadow: '0 2px 4px rgba(0,0,0,0.3)'
-      }}>
-        🔧 维护人员后台管理
-      </h2>
+    <div style={{ background: 'transparent', padding: 0, color: '#111827' }}>
+      <div style={{ background: '#fff', border: '1px solid #eef0f4', borderRadius: 16, boxShadow: '0 6px 24px rgba(17,24,39,0.06)', padding: 20, marginBottom: 16 }}>
+        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>🔧 维护人员后台管理</h2>
+      </div>
 
       {/* 标签页导航 */}
-      <div style={{
-        display: 'flex',
-        borderBottom: '2px solid rgba(255, 255, 255, 0.2)',
-        marginBottom: '24px',
-        gap: '5px'
-      }}>
+      <div style={{ background: '#fff', border: '1px solid #eef0f4', borderRadius: 12, boxShadow: '0 6px 24px rgba(17,24,39,0.06)', padding: 6, display: 'flex', gap: 6, marginBottom: 16 }}>
         <button
           onClick={() => setActiveTab('maintenance')}
           style={{
-            background: activeTab === 'maintenance' 
-              ? 'linear-gradient(90deg, #409eff 60%, #2b8cff 100%)' 
-              : 'rgba(255, 255, 255, 0.1)',
-            color: '#fff',
-            border: 'none',
-            padding: '12px 24px',
-            fontSize: '16px',
-            fontWeight: '500',
+            padding: '10px 16px',
+            background: activeTab === 'maintenance' ? '#111827' : 'transparent',
+            color: activeTab === 'maintenance' ? '#fff' : '#111827',
+            border: '1px solid',
+            borderColor: activeTab === 'maintenance' ? '#111827' : 'transparent',
+            borderRadius: 10,
             cursor: 'pointer',
-            borderRadius: '8px',
-            transition: 'all 0.3s ease',
-            boxShadow: activeTab === 'maintenance' ? '0 4px 15px rgba(64, 158, 255, 0.3)' : 'none',
-            transform: activeTab === 'maintenance' ? 'translateY(-2px)' : 'none'
+            fontSize: 14,
+            fontWeight: 600
           }}
         >
           🛠️ 维护模式管理
@@ -125,19 +99,15 @@ const MaintenancePanel: React.FC<MaintenancePanelProps> = ({ user }) => {
         <button
           onClick={() => setActiveTab('server-status')}
           style={{
-            background: activeTab === 'server-status' 
-              ? 'linear-gradient(90deg, #409eff 60%, #2b8cff 100%)' 
-              : 'rgba(255, 255, 255, 0.1)',
-            color: '#fff',
-            border: 'none',
-            padding: '12px 24px',
-            fontSize: '16px',
-            fontWeight: '500',
+            padding: '10px 16px',
+            background: activeTab === 'server-status' ? '#111827' : 'transparent',
+            color: activeTab === 'server-status' ? '#fff' : '#111827',
+            border: '1px solid',
+            borderColor: activeTab === 'server-status' ? '#111827' : '透明',
+            borderRadius: 10,
             cursor: 'pointer',
-            borderRadius: '8px',
-            transition: 'all 0.3s ease',
-            boxShadow: activeTab === 'server-status' ? '0 4px 15px rgba(64, 158, 255, 0.3)' : 'none',
-            transform: activeTab === 'server-status' ? 'translateY(-2px)' : 'none'
+            fontSize: 14,
+            fontWeight: 600
           }}
         >
           🌐 服务器状态监控
@@ -147,33 +117,12 @@ const MaintenancePanel: React.FC<MaintenancePanelProps> = ({ user }) => {
       {/* 标签页内容 */}
       {activeTab === 'maintenance' ? (
         <div>
-          <h3 style={{
-            color: '#fff',
-            marginBottom: '20px',
-            fontSize: '20px',
-            fontWeight: 'bold',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            textShadow: '0 2px 4px rgba(0,0,0,0.3)'
-          }}>
-            🛠️ 维护模式管理
-          </h3>
+          <div style={{ background: '#fff', border: '1px solid #eef0f4', borderRadius: 16, boxShadow: '0 6px 24px rgba(17,24,39,0.06)', padding: 16, marginBottom: 16 }}>
+            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>🛠️ 维护模式管理</h3>
+          </div>
 
           {/* 当前状态 */}
-          <div style={{
-            background: isMaintenanceMode 
-              ? 'rgba(255, 193, 7, 0.2)' 
-              : 'rgba(40, 167, 69, 0.2)',
-            border: `1px solid ${isMaintenanceMode 
-              ? 'rgba(255, 193, 7, 0.5)' 
-              : 'rgba(40, 167, 69, 0.5)'}`,
-            borderRadius: '12px',
-            padding: '20px',
-            marginBottom: '24px',
-            backdropFilter: 'blur(10px)',
-            boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)'
-          }}>
+          <div style={{ background: '#fff', border: '1px solid #eef0f4', borderRadius: 16, boxShadow: '0 6px 24px rgba(17,24,39,0.06)', padding: 16, marginBottom: 16 }}>
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
@@ -182,30 +131,16 @@ const MaintenancePanel: React.FC<MaintenancePanelProps> = ({ user }) => {
               gap: '10px'
             }}>
               <div>
-                <strong style={{ 
-                  color: isMaintenanceMode ? '#ffc107' : '#28a745',
-                  fontSize: '18px',
-                  textShadow: '0 1px 2px rgba(0,0,0,0.3)'
-                }}>
+                <strong style={{ color: isMaintenanceMode ? '#d97706' : '#059669', fontSize: 16 }}>
                   {isMaintenanceMode ? '🛠️ 系统维护中' : '✅ 系统正常运行'}
                 </strong>
                 {maintenanceInfo && (
-                  <div style={{ 
-                    marginTop: '10px', 
-                    fontSize: '14px', 
-                    color: '#fff',
-                    opacity: 0.9
-                  }}>
+                  <div style={{ marginTop: 8, fontSize: 14, color: '#334155' }}>
                     维护原因: {maintenanceInfo.reason}
                   </div>
                 )}
               </div>
-              <div style={{ 
-                fontSize: '12px', 
-                color: '#fff',
-                opacity: 0.8,
-                textAlign: 'right'
-              }}>
+              <div style={{ fontSize: 12, color: '#64748b', textAlign: 'right' }}>
                 {isMaintenanceMode ? '维护模式已启用' : '系统正常运行'}
               </div>
             </div>
@@ -439,29 +374,12 @@ const MaintenancePanel: React.FC<MaintenancePanelProps> = ({ user }) => {
 
           {/* 维护历史 */}
           <div>
-            <h3 style={{
-              color: '#fff',
-              marginBottom: '20px',
-              fontSize: '18px',
-              fontWeight: 'bold',
-              textShadow: '0 1px 2px rgba(0,0,0,0.3)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
-              📋 维护历史记录
-            </h3>
+            <div style={{ background: '#fff', border: '1px solid #eef0f4', borderRadius: 16, boxShadow: '0 6px 24px rgba(17,24,39,0.06)', padding: 16, marginBottom: 12 }}>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#111827' }}>📋 维护历史记录</h3>
+            </div>
             
             {maintenanceHistory.length === 0 ? (
-              <div style={{ 
-                color: 'rgba(255, 255, 255, 0.7)', 
-                fontStyle: 'italic',
-                textAlign: 'center',
-                padding: '30px',
-                background: 'rgba(255, 255, 255, 0.05)',
-                borderRadius: '12px',
-                border: '1px solid rgba(255, 255, 255, 0.1)'
-              }}>
+              <div style={{ color: '#64748b', fontStyle: 'italic', textAlign: 'center', padding: 24, background: '#fff', border: '1px solid #eef0f4', borderRadius: 12, boxShadow: '0 2px 12px rgba(17,24,39,0.04)' }}>
                 📝 暂无维护历史记录
               </div>
             ) : (
@@ -523,38 +441,19 @@ const MaintenancePanel: React.FC<MaintenancePanelProps> = ({ user }) => {
                       </div>
                     </div>
                     
-                    <div style={{ 
-                      marginBottom: '8px',
-                      color: '#fff',
-                      fontSize: '14px'
-                    }}>
-                      <strong style={{ color: 'rgba(255, 255, 255, 0.9)' }}>原因:</strong> {record.reason}
+                    <div style={{ marginBottom: 8, color: '#111827', fontSize: 14 }}>
+                      <strong>原因:</strong> {record.reason}
                     </div>
                     
-                    <div style={{ 
-                      marginBottom: '8px',
-                      color: '#fff',
-                      fontSize: '14px'
-                    }}>
-                      <strong style={{ color: 'rgba(255, 255, 255, 0.9)' }}>信息:</strong> {record.message}
+                    <div style={{ marginBottom: 8, color: '#111827', fontSize: 14 }}>
+                      <strong>信息:</strong> {record.message}
                     </div>
                     
-                    <div style={{ 
-                      marginBottom: '8px',
-                      color: '#fff',
-                      fontSize: '14px'
-                    }}>
-                      <strong style={{ color: 'rgba(255, 255, 255, 0.9)' }}>维护人员:</strong> {record.enabledBy}
+                    <div style={{ marginBottom: 8, color: '#111827', fontSize: 14 }}>
+                      <strong>维护人员:</strong> {record.enabledBy}
                     </div>
                     
-                    <div style={{ 
-                      fontSize: '12px', 
-                      color: 'rgba(255, 255, 255, 0.7)',
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: '15px',
-                      alignItems: 'center'
-                    }}>
+                    <div style={{ fontSize: 12, color: '#64748b', display: 'flex', flexWrap: 'wrap', gap: 15, alignItems: 'center' }}>
                       <span>
                         <strong>持续时间:</strong> {getDuration(record.startTime, record.endTime)}
                       </span>

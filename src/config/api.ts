@@ -1,19 +1,34 @@
-// API配置 - 智能环境检测
+// API配置 - 智能环境检测（支持内网与环境变量覆盖）
 const getApiBaseUrl = () => {
-  const hostname = window.location.hostname;
-  
-  // 如果是云服务器或Vercel部署环境
+  // 1) 允许通过构建环境变量覆盖（推荐内网部署时设置）
+  //    例如：VITE_API_BASE_URL=/api 或 http://192.168.1.10:3001/api
+  const envUrl = (import.meta as any)?.env?.VITE_API_BASE_URL
+    || (typeof process !== 'undefined' && (process as any)?.env?.VITE_API_BASE_URL);
+  if (envUrl) {
+    return String(envUrl).replace(/\/$/, '');
+  }
+
+  const { hostname, protocol } = window.location;
+
+  // 2) 云服务器或 Vercel 部署环境
   if (
     hostname === '116.62.65.246' ||
     hostname === 'www.liaorenzhi.top' ||
     hostname === 'liaorenzhi.top' ||
     hostname.includes('vercel.app')
   ) {
-    // 生产/云端环境：使用启用 HTTPS 的独立 API 域名，避免混合内容
     return 'https://api.liaorenzhi.top/api';
   }
-  // 本地开发环境
-  return 'http://localhost:3001/api';
+
+  // 3) 本地开发（浏览器访问 http://localhost:5173 等）
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:3001/api';
+  }
+
+  // 4) 默认：内网/实体服务器访问
+  //    情况 A：直接前端从内网地址访问（例：http://192.168.1.20），后端跑在同机 3001 端口
+  //    情况 B：若已通过 Nginx 反向代理到 /api，请在构建时设置 VITE_API_BASE_URL=/api
+  return `${protocol}//${hostname}:3001/api`;
 };
 
 export const API_BASE_URL = getApiBaseUrl();

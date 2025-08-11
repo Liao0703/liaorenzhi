@@ -7,6 +7,7 @@ import Login from './Login';
 import Register from './Register';
 import ForgotPassword from './ForgotPassword';
 import Dashboard from './Dashboard';
+import RoleHome from './RoleHome';
 import ArticleList from './ArticleList';
 import ArticleReader from './ArticleReader';
 import AdminPanel from './AdminPanel';
@@ -17,6 +18,7 @@ import DataSyncStatus from './DataSyncStatus';
 import CameraTest from './CameraTest';
 import MaintenancePage from './MaintenancePage';
 import { maintenanceService } from './maintenanceService';
+import { API_BASE_URL } from './config/api';
 import MaintenanceTest from './MaintenanceTest';
 
 const AppContent = () => {
@@ -24,6 +26,7 @@ const AppContent = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
   const location = useLocation();
+    const isLoginPage = !user && location.pathname === '/';
 
   useEffect(() => {
     // 检查用户登录状态
@@ -39,20 +42,10 @@ const AppContent = () => {
       
       if (token) {
         try {
-          // 验证token是否有效
-          const getApiUrl = () => {
-            const hostname = window.location.hostname;
-            if (hostname === '116.62.65.246' || 
-                hostname === 'www.liaorenzhi.top' || 
-                hostname === 'liaorenzhi.top' ||
-                hostname.includes('vercel.app')) {
-              return 'http://116.62.65.246:3001';
-            }
-            return 'http://localhost:3001';
-          };
+          // 验证token是否有效（统一走 API_BASE_URL）
           
           console.log('🌐 正在验证token...');
-          const response = await fetch(`${getApiUrl()}/api/auth/me`, {
+          const response = await fetch(`${API_BASE_URL}/auth/me`, {
             headers: {
               'Authorization': `Bearer ${token}`
             }
@@ -171,16 +164,16 @@ const AppContent = () => {
   }
 
   return (
-      <div style={{ position: 'relative', minHeight: '100vh', minWidth: '100vw', overflow: 'hidden', paddingBottom: 60 }}>
-        <img src={bgImg} alt="背景图" className="bg" />
-        {/* 在维护界面时隐藏logo栏 */}
-        {!location.pathname.includes('/maintenance') && (
-          <div className="logo-bar">
-            <img src={logoImg} alt="logo" />
-            <span style={{ color: '#fff', fontSize: 26, letterSpacing: 4, fontWeight: 500, textShadow: '0 2px 8px #0007' }}>
-              兴隆场车站 XINGLONGCHANG RAILWAY STATION
-            </span>
-          </div>
+      <div style={{ position: 'relative', minHeight: '100vh', minWidth: '100vw', overflow: 'hidden', paddingBottom: 60, background: '#f5f7fb' }}>
+        {/* 登录页使用背景图与logo */}
+        {isLoginPage && (
+          <>
+            <img src={bgImg} alt="背景图" className="bg" />
+            <div className="overlay-gradient" />
+            <div className="logo-bar">
+              <img src={logoImg} alt="logo" />
+            </div>
+          </>
         )}
 
         {/* 维护模式页面 */}
@@ -212,7 +205,7 @@ const AppContent = () => {
           <Route
             path="/dashboard"
             element={
-              user ? <Dashboard user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />
+              user ? <RoleHome user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />
             }
           />
           <Route
@@ -267,10 +260,11 @@ const AppContent = () => {
           />
         </Routes>
 
-        {/* 数据同步状态显示 */}
+        {/* 恢复登录页也显示同步状态条 */}
         <DataSyncStatus />
 
         {/* 版权信息栏 */}
+        {/* 恢复登录页也显示页脚 */}
         <footer
           style={{
             position: 'fixed',

@@ -1,7 +1,9 @@
 // 云端文章数据同步服务
 import type { ArticleData } from './articleData';
+import { API_BASE_URL } from './config/api';
 
-const API_BASE = window.location.origin;
+// 统一使用后端 API 根路径（生产为 https://api.liaorenzhi.top/api）
+const API_BASE = API_BASE_URL;
 
 export interface CloudApiResponse<T = any> {
   success: boolean;
@@ -16,7 +18,7 @@ export class CloudArticleService {
   // 获取所有文章
   static async getAllArticles(): Promise<ArticleData[]> {
     try {
-      const response = await fetch(`${API_BASE}/api/articles`);
+      const response = await fetch(`${API_BASE}/articles`);
       if (!response.ok) {
         throw new Error(`获取文章失败: ${response.status}`);
       }
@@ -36,7 +38,7 @@ export class CloudArticleService {
   // 添加文章
   static async addArticle(article: Omit<ArticleData, 'id'>): Promise<ArticleData> {
     try {
-      const response = await fetch(`${API_BASE}/api/articles/single`, {
+      const response = await fetch(`${API_BASE}/articles/single`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -63,7 +65,7 @@ export class CloudArticleService {
   // 更新文章
   static async updateArticle(article: ArticleData): Promise<ArticleData> {
     try {
-      const response = await fetch(`${API_BASE}/api/articles/${article.id}`, {
+      const response = await fetch(`${API_BASE}/articles/${article.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -90,7 +92,7 @@ export class CloudArticleService {
   // 删除文章
   static async deleteArticle(id: string): Promise<void> {
     try {
-      const response = await fetch(`${API_BASE}/api/articles/${id}`, {
+      const response = await fetch(`${API_BASE}/articles/${id}`, {
         method: 'DELETE',
       });
 
@@ -121,7 +123,7 @@ export class CloudArticleService {
     for (const article of localArticles) {
       try {
         // 尝试更新（如果存在）或添加（如果不存在）
-        await fetch(`${API_BASE}/api/articles/single`, {
+        await fetch(`${API_BASE}/articles/single`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -145,7 +147,7 @@ export class CloudArticleService {
     message: string;
   }> {
     try {
-      const response = await fetch(`${API_BASE}/api/articles`);
+      const response = await fetch(`${API_BASE}/articles`);
       if (!response.ok) {
         throw new Error(`连接失败: ${response.status}`);
       }

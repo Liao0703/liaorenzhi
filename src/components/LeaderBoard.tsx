@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getLeaderboardData } from '../leaderboardService';
 
 interface UserRankData {
   id: number;
@@ -18,43 +19,11 @@ const LeaderBoard: React.FC<LeaderBoardProps> = ({ currentUser, position = 'defa
   const [topUsers, setTopUsers] = useState<UserRankData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 获取API URL
-  const getApiUrl = () => {
-    const hostname = window.location.hostname;
-    if (hostname === '116.62.65.246' || 
-        hostname === 'www.liaorenzhi.top' || 
-        hostname === 'liaorenzhi.top' ||
-        hostname.includes('vercel.app')) {
-      return 'http://116.62.65.246:3001';
-    }
-    return 'http://localhost:3001';
-  };
-
   // 获取排行榜数据
   const fetchLeaderboardData = async () => {
     try {
-      // 这里可以实现后端API调用
-      // const response = await fetch(`${getApiUrl()}/api/leaderboard/top10`);
-      // if (response.ok) {
-      //   const data = await response.json();
-      //   setTopUsers(data.users);
-      // }
-      
-      // 目前使用模拟数据（按平均成绩排序）
-      const mockUsers: UserRankData[] = [
-        { id: 3, name: '王五', averageScore: 92, unit: '兴隆场车站', team: '运转一班' },
-        { id: 5, name: '孙七', averageScore: 90, unit: '兴隆场车站', team: '运转四班' },
-        { id: 4, name: '赵六', averageScore: 88, unit: '兴隆场车站', team: '运转三班' },
-        { id: 7, name: '吴九', averageScore: 86, unit: '兴隆场车站', team: '运转三班' },
-        { id: 1, name: '张三', averageScore: 85, unit: '兴隆场车站', team: '运转一班' },
-        { id: 6, name: '周八', averageScore: 82, unit: '兴隆场车站', team: '运转二班' },
-        { id: 8, name: '郑十', averageScore: 79, unit: '兴隆场车站', team: '运转四班' },
-        { id: 2, name: '李四', averageScore: 78, unit: '兴隆场车站', team: '运转二班' },
-        { id: 9, name: '陈一', averageScore: 76, unit: '兴隆场车站', team: '运转一班' },
-        { id: 10, name: '林二', averageScore: 74, unit: '兴隆场车站', team: '运转二班' }
-      ];
-      
-      setTopUsers(mockUsers);
+      const users = await getLeaderboardData();
+      setTopUsers(users);
       setIsLoading(false);
     } catch (error) {
       console.error('获取排行榜数据失败:', error);

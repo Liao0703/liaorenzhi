@@ -217,28 +217,35 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
 
 
 
+  // 统一白底卡片与子卡片样式
+  const lightCard: React.CSSProperties = {
+    background: '#fff',
+    border: '1px solid #eef0f4',
+    borderRadius: 16,
+    boxShadow: '0 6px 24px rgba(17,24,39,0.06)'
+  };
+  const subCard: React.CSSProperties = {
+    background: '#f8fafc',
+    border: '1px solid #eef2f7',
+    borderRadius: 10
+  };
+
   return (
-    <div style={{
-      background: 'rgba(0,0,0,0.3)',
-      padding: '20px',
-      borderRadius: '12px',
-      backdropFilter: 'blur(10px)',
-      color: '#fff'
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h3 style={{ margin: 0, fontSize: '18px' }}>👥 用户账号管理</h3>
+    <div style={{ ...lightCard, padding: 20, color: '#111827' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#111827' }}>👥 用户账号管理</h3>
         <button
           onClick={handleAdd}
           disabled={loading}
           style={{
-            padding: '8px 18px',
-            background: 'linear-gradient(90deg,#409eff 60%,#2b8cff 100%)',
+            padding: '8px 14px',
+            background: '#111827',
             color: '#fff',
-            border: 'none',
-            borderRadius: '8px',
+            border: '1px solid #111827',
+            borderRadius: 10,
             cursor: loading ? 'not-allowed' : 'pointer',
-            fontSize: '14px',
-            fontWeight: 500,
+            fontSize: 13,
+            fontWeight: 600,
             opacity: loading ? 0.7 : 1
           }}
         >
@@ -251,20 +258,23 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
         <table style={{
           width: '100%',
           borderCollapse: 'collapse',
-          backgroundColor: 'rgba(255,255,255,0.05)',
-          borderRadius: '8px',
-          overflow: 'hidden'
+          backgroundColor: '#fff',
+          border: '1px solid #eef0f4',
+          borderRadius: 10,
+          overflow: 'hidden',
+          boxShadow: '0 4px 16px rgba(17,24,39,0.06)',
+          color: '#111827'
         }}>
           <thead>
-            <tr style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
-              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px' }}>工号</th>
-              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px' }}>姓名</th>
-              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px' }}>电话</th>
-              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px' }}>单位</th>
-              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px' }}>部门</th>
-              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px' }}>班组</th>
-              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px' }}>工种</th>
-              <th style={{ padding: '12px 8px', textAlign: 'center', fontSize: '12px' }}>操作</th>
+            <tr style={{ backgroundColor: '#f8fafc' }}>
+              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px', color: '#111827' }}>工号</th>
+              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px', color: '#111827' }}>姓名</th>
+              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px', color: '#111827' }}>电话</th>
+              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px', color: '#111827' }}>单位</th>
+              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px', color: '#111827' }}>部门</th>
+              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px', color: '#111827' }}>班组</th>
+              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px', color: '#111827' }}>工种</th>
+              <th style={{ padding: '12px 8px', textAlign: 'center', fontSize: '12px', color: '#111827' }}>操作</th>
             </tr>
           </thead>
           <tbody>
@@ -282,13 +292,13 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
               </tr>
             ) : (
               users.map(user => (
-                <tr key={user.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                <tr key={user.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                   <td style={{ padding: '8px', fontSize: '12px' }}>
-                    <code style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px' }}>
+                    <code style={{ background: '#f3f4f6', padding: '2px 6px', borderRadius: 4 }}>
                       {user.employee_id || '-'}
                     </code>
                   </td>
-                  <td style={{ padding: '8px', fontSize: '12px' }}>
+                  <td style={{ padding: '8px', fontSize: '12px', fontWeight: 600 }}>
                     {user.full_name || user.name}
                   </td>
                   <td style={{ padding: '8px', fontSize: '12px' }}>{user.phone || '-'}</td>
@@ -300,13 +310,14 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
                     <button
                       onClick={() => handleEdit(user)}
                       style={{
-                        padding: '4px 8px',
-                        background: 'rgba(64, 158, 255, 0.8)',
+                        padding: '6px 10px',
+                        background: '#111827',
                         color: '#fff',
-                        border: 'none',
-                        borderRadius: '4px',
+                        border: '1px solid #111827',
+                        borderRadius: 8,
                         cursor: 'pointer',
-                        fontSize: '10px'
+                        fontSize: 12,
+                        fontWeight: 600
                       }}
                     >
                       编辑
@@ -327,7 +338,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0,0,0,0.7)',
+          background: 'rgba(0,0,0,0.4)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -336,55 +347,49 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
           boxSizing: 'border-box'
         }}>
           <div style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(20px)',
-            padding: '25px',
-            borderRadius: '20px',
+            background: '#fff',
+            border: '1px solid #eef0f4',
+            borderRadius: 16,
+            boxShadow: '0 10px 30px rgba(17,24,39,0.12)',
+            padding: 20,
             width: '95%',
             maxWidth: '700px',
             maxHeight: '85vh',
             overflowY: 'auto',
-            color: '#fff',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)',
-            margin: '20px'
+            color: '#111827',
+            margin: 20
           }}>
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              marginBottom: '20px'
+              marginBottom: 16
             }}>
-              <h4 style={{ 
-                margin: 0, 
-                fontSize: '18px',
-                fontWeight: 'bold',
-                textShadow: '0 2px 4px rgba(0,0,0,0.3)'
-              }}>
+              <h4 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
                 {editingUser ? '✏️ 编辑用户' : '➕ 添加用户'}
               </h4>
               <button
                 onClick={() => setShowForm(false)}
                 style={{
-                  background: 'none',
+                  background: 'transparent',
                   border: 'none',
-                  color: '#fff',
-                  fontSize: '24px',
+                  color: '#111827',
+                  fontSize: 22,
                   cursor: 'pointer',
-                  padding: '5px',
-                  borderRadius: '50%',
-                  width: '35px',
-                  height: '35px',
+                  padding: 5,
+                  borderRadius: 8,
+                  width: 32,
+                  height: 32,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  transition: 'all 0.3s ease'
+                  transition: 'all 0.2s ease'
                 }}
                 onMouseOver={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                  e.currentTarget.style.background = '#f3f4f6';
                 }}
                 onMouseOut={(e) => {
-                  e.currentTarget.style.background = 'none';
+                  e.currentTarget.style.background = 'transparent';
                 }}
               >
                 ✕
@@ -400,13 +405,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
               paddingRight: '10px'
             }}>
               <div>
-                <label style={{ 
-                  display: 'block', 
-                  marginBottom: '8px', 
-                  fontSize: '12px',
-                  color: '#fff',
-                  fontWeight: '500'
-                }}>用户名</label>
+                <label style={{ display: 'block', marginBottom: 8, fontSize: 12, color: '#111827', fontWeight: 600 }}>用户名</label>
                 <input
                   type="text"
                   value={formData.username}
@@ -415,13 +414,13 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
                   style={{
                     width: '100%',
                     padding: '10px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(255, 255, 255, 0.3)',
-                    background: 'rgba(255, 255, 255, 0.15)',
-                    color: '#fff',
-                    fontSize: '14px',
+                    borderRadius: 10,
+                    border: '1px solid #e5e7eb',
+                    background: '#fff',
+                    color: '#111827',
+                    fontSize: 14,
                     outline: 'none',
-                    transition: 'all 0.3s ease',
+                    transition: 'all 0.2s ease',
                     boxSizing: 'border-box',
                     opacity: editingUser ? 0.6 : 1
                   }}
@@ -440,13 +439,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
               </div>
 
               <div>
-                <label style={{ 
-                  display: 'block', 
-                  marginBottom: '8px', 
-                  fontSize: '12px',
-                  color: '#fff',
-                  fontWeight: '500'
-                }}>
+                <label style={{ display: 'block', marginBottom: 8, fontSize: 12, color: '#111827', fontWeight: 600 }}>
                   {editingUser ? '新密码（留空不修改）' : '密码'}
                 </label>
                 <input
@@ -456,13 +449,13 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
                   style={{
                     width: '100%',
                     padding: '10px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(255, 255, 255, 0.3)',
-                    background: 'rgba(255, 255, 255, 0.15)',
-                    color: '#fff',
-                    fontSize: '14px',
+                    borderRadius: 10,
+                    border: '1px solid #e5e7eb',
+                    background: '#fff',
+                    color: '#111827',
+                    fontSize: 14,
                     outline: 'none',
-                    transition: 'all 0.3s ease',
+                    transition: 'all 0.2s ease',
                     boxSizing: 'border-box'
                   }}
                   onFocus={(e) => {
@@ -478,7 +471,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px' }}>姓名</label>
+                <label style={{ display: 'block', marginBottom: 5, fontSize: 12 }}>姓名</label>
                 <input
                   type="text"
                   value={formData.name}
@@ -486,18 +479,18 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
                   style={{
                     width: '100%',
                     padding: '8px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: 'rgba(255,255,255,0.2)',
-                    color: '#fff',
-                    fontSize: '14px'
+                    borderRadius: 10,
+                    border: '1px solid #e5e7eb',
+                    background: '#fff',
+                    color: '#111827',
+                    fontSize: 14
                   }}
                   placeholder="姓名"
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px' }}>全名</label>
+                <label style={{ display: 'block', marginBottom: 5, fontSize: 12 }}>全名</label>
                 <input
                   type="text"
                   value={formData.full_name}
@@ -505,18 +498,18 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
                   style={{
                     width: '100%',
                     padding: '8px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: 'rgba(255,255,255,0.2)',
-                    color: '#fff',
-                    fontSize: '14px'
+                    borderRadius: 10,
+                    border: '1px solid #e5e7eb',
+                    background: '#fff',
+                    color: '#111827',
+                    fontSize: 14
                   }}
                   placeholder="全名"
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px' }}>工号</label>
+                <label style={{ display: 'block', marginBottom: 5, fontSize: 12 }}>工号</label>
                 <input
                   type="text"
                   value={formData.employee_id}
@@ -525,11 +518,11 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
                   style={{
                     width: '100%',
                     padding: '8px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: 'rgba(255,255,255,0.2)',
-                    color: '#fff',
-                    fontSize: '14px'
+                    borderRadius: 10,
+                    border: '1px solid #e5e7eb',
+                    background: '#fff',
+                    color: '#111827',
+                    fontSize: 14
                   }}
                   placeholder="如: 12345"
                 />
@@ -538,7 +531,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
 
 
               <div>
-                <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px' }}>部门</label>
+                <label style={{ display: 'block', marginBottom: 5, fontSize: 12 }}>部门</label>
                 <input
                   type="text"
                   value="白市驿车站"
@@ -546,35 +539,29 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
                   style={{
                     width: '100%',
                     padding: '8px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: 'rgba(255,255,255,0.1)',
-                    color: '#fff',
-                    fontSize: '14px',
+                    borderRadius: 10,
+                    border: '1px solid #e5e7eb',
+                    background: '#fff',
+                    color: '#111827',
+                    fontSize: 14,
                     opacity: 0.8
                   }}
                 />
               </div>
 
               <div>
-                <label style={{ 
-                  display: 'block', 
-                  marginBottom: '5px', 
-                  fontSize: '12px',
-                  color: '#fff',
-                  fontWeight: '500'
-                }}>班组</label>
+                <label style={{ display: 'block', marginBottom: 5, fontSize: 12, color: '#111827', fontWeight: 600 }}>班组</label>
                 <select
                   value={formData.team}
                   onChange={e => setFormData({...formData, team: e.target.value})}
                   style={{
                     width: '100%',
                     padding: '8px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: 'rgba(255,255,255,0.2)',
-                    color: '#fff',
-                    fontSize: '14px'
+                    borderRadius: 10,
+                    border: '1px solid #e5e7eb',
+                    background: '#fff',
+                    color: '#111827',
+                    fontSize: 14
                   }}
                 >
                   {teams.map(team => (
@@ -584,18 +571,18 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px' }}>工种</label>
+                <label style={{ display: 'block', marginBottom: 5, fontSize: 12 }}>工种</label>
                 <select
                   value={formData.job_type}
                   onChange={e => setFormData({...formData, job_type: e.target.value})}
                   style={{
                     width: '100%',
                     padding: '8px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: 'rgba(255,255,255,0.2)',
-                    color: '#fff',
-                    fontSize: '14px'
+                    borderRadius: 10,
+                    border: '1px solid #e5e7eb',
+                    background: '#fff',
+                    color: '#111827',
+                    fontSize: 14
                   }}
                 >
                   {jobTypes.map(job => (
@@ -605,7 +592,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px' }}>单位</label>
+                <label style={{ display: 'block', marginBottom: 5, fontSize: 12 }}>单位</label>
                 <input
                   type="text"
                   value="兴隆村车站"
@@ -613,18 +600,18 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
                   style={{
                     width: '100%',
                     padding: '8px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: 'rgba(255,255,255,0.1)',
-                    color: '#fff',
-                    fontSize: '14px',
+                    borderRadius: 10,
+                    border: '1px solid #e5e7eb',
+                    background: '#fff',
+                    color: '#111827',
+                    fontSize: 14,
                     opacity: 0.8
                   }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px' }}>邮箱</label>
+                <label style={{ display: 'block', marginBottom: 5, fontSize: 12 }}>邮箱</label>
                 <input
                   type="email"
                   value={formData.email}
@@ -632,18 +619,18 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
                   style={{
                     width: '100%',
                     padding: '8px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: 'rgba(255,255,255,0.2)',
-                    color: '#fff',
-                    fontSize: '14px'
+                    borderRadius: 10,
+                    border: '1px solid #e5e7eb',
+                    background: '#fff',
+                    color: '#111827',
+                    fontSize: 14
                   }}
                   placeholder="邮箱"
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px' }}>手机号</label>
+                <label style={{ display: 'block', marginBottom: 5, fontSize: 12 }}>手机号</label>
                 <input
                   type="tel"
                   value={formData.phone}
@@ -651,11 +638,11 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
                   style={{
                     width: '100%',
                     padding: '8px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: 'rgba(255,255,255,0.2)',
-                    color: '#fff',
-                    fontSize: '14px'
+                    borderRadius: 10,
+                    border: '1px solid #e5e7eb',
+                    background: '#fff',
+                    color: '#111827',
+                    fontSize: 14
                   }}
                   placeholder="手机号"
                 />
@@ -672,24 +659,15 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
               <button
                 onClick={() => setShowForm(false)}
                 style={{
-                  padding: '12px 25px',
-                  background: 'rgba(255,255,255,0.15)',
-                  color: '#fff',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  borderRadius: '25px',
+                  padding: '8px 14px',
+                  background: '#fff',
+                  color: '#111827',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: 10,
                   cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  transition: 'all 0.3s ease',
-                  backdropFilter: 'blur(10px)'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.25)';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
-                  e.currentTarget.style.transform = 'translateY(0)';
+                  fontSize: 13,
+                  fontWeight: 600,
+                  transition: 'all 0.2s ease'
                 }}
               >
                 ❌ 取消
@@ -698,32 +676,14 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
                 onClick={handleSave}
                 disabled={loading || !formData.username || (!editingUser && !formData.password)}
                 style={{
-                  padding: '12px 25px',
-                  background: loading || !formData.username || (!editingUser && !formData.password)
-                    ? 'rgba(255,255,255,0.3)'
-                    : 'linear-gradient(90deg,#409eff 60%,#2b8cff 100%)',
+                  padding: '8px 14px',
+                  background: loading || !formData.username || (!editingUser && !formData.password) ? '#9ca3af' : '#111827',
                   color: '#fff',
-                  border: 'none',
-                  borderRadius: '25px',
+                  border: '1px solid #111827',
+                  borderRadius: 10,
                   cursor: loading || !formData.username || (!editingUser && !formData.password) ? 'not-allowed' : 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  transition: 'all 0.3s ease',
-                  boxShadow: loading || !formData.username || (!editingUser && !formData.password) 
-                    ? 'none' 
-                    : '0 4px 15px rgba(64, 158, 255, 0.3)'
-                }}
-                onMouseOver={(e) => {
-                  if (!loading && formData.username && (editingUser || formData.password)) {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(64, 158, 255, 0.4)';
-                  }
-                }}
-                onMouseOut={(e) => {
-                  if (!loading && formData.username && (editingUser || formData.password)) {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(64, 158, 255, 0.3)';
-                  }
+                  fontSize: 13,
+                  fontWeight: 600
                 }}
               >
                 {loading ? '⏳ 保存中...' : '✅ 保存'}

@@ -24,6 +24,8 @@ interface Article {
 const ArticleList: React.FC<ArticleListProps> = ({ user: _user }) => {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'not_started' | 'in_progress' | 'completed'>('all');
+  const [searchKeyword, setSearchKeyword] = useState('');
   const [articles, setArticles] = useState<Article[]>([]);
 
   // 从localStorage获取真实文章数据
@@ -88,9 +90,15 @@ const ArticleList: React.FC<ArticleListProps> = ({ user: _user }) => {
 
   const categories = ['all', '安全规程', '设备维护', '应急处理', '信号系统', '调度规范', '作业标准'];
 
-  const filteredArticles = selectedCategory === 'all' 
-    ? articles 
-    : articles.filter(article => article.category === selectedCategory);
+  const filteredArticles = (
+    selectedCategory === 'all' ? articles : articles.filter(article => article.category === selectedCategory)
+  )
+    .filter(article =>
+      statusFilter === 'all' ? true : article.status === statusFilter
+    )
+    .filter(article =>
+      searchKeyword.trim() === '' ? true : article.title.toLowerCase().includes(searchKeyword.trim().toLowerCase())
+    );
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -115,7 +123,7 @@ const ArticleList: React.FC<ArticleListProps> = ({ user: _user }) => {
       position: 'relative', 
       zIndex: 10, 
       padding: '20px',
-      color: '#fff',
+      color: '#1f2937',
       minHeight: '100vh',
       maxWidth: '100vw',
       overflowX: 'hidden'
@@ -124,59 +132,100 @@ const ArticleList: React.FC<ArticleListProps> = ({ user: _user }) => {
       <div style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: '15px',
-        marginBottom: '30px',
-        padding: '20px',
-        background: 'rgba(0,0,0,0.3)',
-        borderRadius: '12px',
-        backdropFilter: 'blur(10px)'
+        gap: '10px',
+        marginBottom: '20px',
+        padding: '16px',
+        background: 'linear-gradient(180deg, #f3f4f6 0%, #eef2f7 100%)',
+        borderRadius: '12px'
       }}>
-        <h2 style={{ margin: 0, fontSize: '24px', textAlign: 'center' }}>学习中心</h2>
-        <button
-          onClick={() => navigate('/dashboard')}
-          style={{
-            padding: '10px 20px',
-            background: 'rgba(255,255,255,0.2)',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            alignSelf: 'center'
-          }}
-        >
-          返回首页
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: '22px' }}>学习中心</h2>
+            <div style={{ marginTop: '4px', fontSize: '12px', opacity: 0.8 }}>挑选课程开始学习，系统将实时记录你的学习进度</div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <input
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              placeholder="搜索课程标题"
+              style={{
+                padding: '8px 12px',
+                background: '#fff',
+                color: '#111827',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                outline: 'none',
+                width: '200px'
+              }}
+            />
+            <button
+              onClick={() => navigate('/dashboard')}
+              style={{
+                padding: '8px 14px',
+                background: '#f3f4f6',
+                color: '#111827',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >返回首页</button>
+          </div>
+        </div>
       </div>
 
       {/* 分类筛选 */}
-      <div style={{
-        display: 'flex',
-        gap: '8px',
-        marginBottom: '20px',
-        flexWrap: 'wrap',
-        justifyContent: 'center'
-      }}>
-        {categories.map(category => (
-          <button
-            key={category}
-            onClick={() => setSelectedCategory(category)}
-            style={{
-              padding: '6px 12px',
-              background: selectedCategory === category 
-                ? 'linear-gradient(90deg,#409eff 60%,#2b8cff 100%)' 
-                : 'rgba(255,255,255,0.1)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '16px',
-              cursor: 'pointer',
-              fontSize: '12px',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            {category === 'all' ? '全部' : category}
-          </button>
-        ))}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '18px' }}>
+        <div style={{
+          display: 'flex',
+          gap: '8px',
+          flexWrap: 'wrap',
+          justifyContent: 'center'
+        }}>
+          {categories.map(category => (
+            <button
+              key={category}
+              onClick={() => setSelectedCategory(category)}
+              style={{
+                padding: '6px 12px',
+                background: selectedCategory === category 
+                  ? 'linear-gradient(90deg,#409eff 60%,#2b8cff 100%)' 
+                  : 'rgba(0,0,0,0.04)',
+                color: selectedCategory === category ? '#fff' : '#111827',
+                border: '1px solid rgba(0,0,0,0.06)',
+                borderRadius: '16px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {category === 'all' ? '全部' : category}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          {[
+            { key: 'all', label: '全部状态' },
+            { key: 'not_started', label: '未开始' },
+            { key: 'in_progress', label: '学习中' },
+            { key: 'completed', label: '已完成' }
+          ].map(item => (
+            <button
+              key={item.key}
+              onClick={() => setStatusFilter(item.key as any)}
+              style={{
+                padding: '4px 10px',
+                background: statusFilter === (item.key as any) ? 'rgba(37,99,235,0.15)' : 'rgba(0,0,0,0.05)',
+                color: '#111827',
+                border: '1px solid rgba(0,0,0,0.08)',
+                borderRadius: '12px',
+                cursor: 'pointer',
+                fontSize: '12px'
+              }}
+            >{item.label}</button>
+          ))}
+        </div>
       </div>
 
       {/* 文章列表 */}
@@ -189,17 +238,17 @@ const ArticleList: React.FC<ArticleListProps> = ({ user: _user }) => {
           <div
             key={article.id}
             style={{
-              background: 'rgba(0,0,0,0.3)',
-              padding: '15px',
-              borderRadius: '12px',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              background: '#ffffff',
+              padding: '16px',
+              borderRadius: '14px',
+              border: '1px solid #e5e7eb',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
               cursor: 'pointer',
-              transition: 'all 0.3s ease'
+              transition: 'all 0.25s ease'
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.3)';
+              e.currentTarget.style.boxShadow = '0 10px 24px rgba(0,0,0,0.12)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
@@ -230,8 +279,8 @@ const ArticleList: React.FC<ArticleListProps> = ({ user: _user }) => {
             <div style={{ marginBottom: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               <span style={{
                 padding: '3px 6px',
-                background: 'rgba(64, 158, 255, 0.2)',
-                color: '#409eff',
+                background: 'rgba(37, 99, 235, 0.10)',
+                color: '#2563eb',
                 borderRadius: '4px',
                 fontSize: '10px'
               }}>
@@ -261,40 +310,50 @@ const ArticleList: React.FC<ArticleListProps> = ({ user: _user }) => {
               <div style={{
                 width: '100%',
                 height: '4px',
-                background: 'rgba(255,255,255,0.2)',
+                background: '#e5e7eb',
                 borderRadius: '2px',
                 overflow: 'hidden'
               }}>
                 <div style={{
                   width: `${article.progress}%`,
                   height: '100%',
-                  background: 'linear-gradient(90deg,#409eff 60%,#2b8cff 100%)',
+                  background: 'linear-gradient(90deg,#3b82f6 0%,#2563eb 100%)',
                   borderRadius: '2px',
                   transition: 'width 0.3s ease'
                 }} />
               </div>
             </div>
 
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '5px',
-              fontSize: '12px',
-              opacity: 0.8
-            }}>
-                                      <span>要求时长：{article.requiredReadingTime}分钟</span>
-              {article.score && <span>成绩：{article.score}分</span>}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
+                fontSize: '12px',
+                opacity: 0.85
+              }}>
+                <span>要求时长：{article.requiredReadingTime}分钟</span>
+                {article.score && <span>成绩：{article.score}分</span>}
+                {article.lastStudyTime && (
+                  <span style={{ opacity: 0.7 }}>最后学习：{article.lastStudyTime}</span>
+                )}
+              </div>
+
+              <button
+                onClick={(e) => { e.stopPropagation(); navigate(`/article/${article.id}`); }}
+                style={{
+                  padding: '8px 12px',
+                  background: 'linear-gradient(90deg,#3b82f6 0%, #2563eb 100%)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  whiteSpace: 'nowrap'
+                }}
+              >{article.status === 'not_started' ? '开始学习' : '继续学习'}</button>
             </div>
 
-            {article.lastStudyTime && (
-              <div style={{
-                marginTop: '8px',
-                fontSize: '10px',
-                opacity: 0.6
-              }}>
-                最后学习：{article.lastStudyTime}
-              </div>
-            )}
           </div>
         ))}
       </div>

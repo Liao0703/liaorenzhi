@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { STORAGE_CONFIG } from './fileUploadService';
+import { STORAGE_CONFIG, FILE_API_BASE } from './fileUploadService';
 
 interface ServerConfigPanelProps {
   onClose: () => void;
@@ -24,11 +24,11 @@ const ServerConfigPanel: React.FC<ServerConfigPanelProps> = ({ onClose }) => {
       setIsLoading(true);
       
       // 检查API健康状态
-      const healthResponse = await fetch('/api/files/health');
+      const healthResponse = await fetch(`${FILE_API_BASE}/health`);
       const healthData = await healthResponse.json();
       
       // 检查文件列表API
-      const listResponse = await fetch('/api/files/list');
+      const listResponse = await fetch(`${FILE_API_BASE}/list`);
       const listData = await listResponse.json();
       
       setServerStatus({
@@ -69,7 +69,7 @@ const ServerConfigPanel: React.FC<ServerConfigPanelProps> = ({ onClose }) => {
       const formData = new FormData();
       formData.append('file', testFile);
       
-      const response = await fetch('/api/files/upload', {
+      const response = await fetch(`${FILE_API_BASE}/upload`, {
         method: 'POST',
         body: formData
       });
@@ -82,7 +82,7 @@ const ServerConfigPanel: React.FC<ServerConfigPanelProps> = ({ onClose }) => {
         setTimeout(async () => {
           try {
             const filename = result.fileUrl.split('/').pop();
-            await fetch(`/api/files/delete/${filename}`, { method: 'DELETE' });
+            await fetch(`${FILE_API_BASE}/delete/${filename}`, { method: 'DELETE' });
           } catch (e) {
             console.log('删除测试文件失败（非关键错误）');
           }

@@ -1,4 +1,5 @@
 // 云服务器文件上传服务 - 统一上传到云服务器
+import { API_BASE_URL } from './config/api';
 export interface FileUploadResult {
   success: boolean;
   fileUrl?: string;
@@ -32,19 +33,11 @@ export const getFileType = (fileType: string): string => {
   return SUPPORTED_FILE_TYPES[fileType as keyof typeof SUPPORTED_FILE_TYPES] || 'unknown';
 };
 
-// 云服务器配置：在生产环境统一走独立的 API 域名，避免混合内容
-const CLOUD_SERVER_URL = (() => {
-  const hostname = window.location.hostname;
-  if (
-    hostname === 'www.liaorenzhi.top' ||
-    hostname === 'liaorenzhi.top' ||
-    hostname.includes('vercel.app')
-  ) {
-    return 'https://api.liaorenzhi.top';
-  }
-  return window.location.origin;
-})();
-const FILE_API_BASE = `${CLOUD_SERVER_URL}/api/files`;
+// 统一使用全局 API 根地址来确定文件服务地址
+// 本地: API_BASE_URL = http://localhost:3001/api → ORIGIN = http://localhost:3001
+// 生产: API_BASE_URL = https://api.liaorenzhi.top/api → ORIGIN = https://api.liaorenzhi.top
+const API_ORIGIN = API_BASE_URL.replace(/\/?api\/?$/, '').replace(/\/$/, '');
+export const FILE_API_BASE = `${API_BASE_URL}/files`;
 
 // 统一文件上传到云服务器
 export const uploadFileToServer = async (file: File): Promise<FileUploadResult> => {
@@ -199,8 +192,8 @@ export const getFilePreviewUrl = (fileUrl: string, fileType: string): string => 
       isValidUrl = true;
     } catch (error) {
       // 如果是相对URL，补充完整URL
-      if (fileUrl.startsWith('/')) {
-        fileUrl = `${CLOUD_SERVER_URL}${fileUrl}`;
+        if (fileUrl.startsWith('/')) {
+          fileUrl = `${API_ORIGIN}${fileUrl}`;
         isValidUrl = true;
       } else {
         console.error('无效的文件URL:', fileUrl);
@@ -254,7 +247,7 @@ export const STORAGE_CONFIG = {
   
   // 云服务器配置
   serverConfig: {
-    baseUrl: CLOUD_SERVER_URL,
+    baseUrl: API_ORIGIN,
     apiPath: '/api/files',
     maxFileSize: 50 * 1024 * 1024, // 50MB
     supportedTypes: Object.keys(SUPPORTED_FILE_TYPES)
@@ -265,4 +258,4 @@ console.log('🔧 存储配置已更新：');
 console.log('- OSS存储：❌ 已禁用');
 console.log('- 本地存储：❌ 已禁用'); 
 console.log('- 云服务器存储：✅ 已启用');
-console.log(`- 云服务器地址：${CLOUD_SERVER_URL}`); 
+console.log(`- 云服务器地址：${API_ORIGIN}`);

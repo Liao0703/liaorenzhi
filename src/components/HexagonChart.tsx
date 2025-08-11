@@ -12,21 +12,22 @@ interface HexagonChartProps {
 }
 
 const HexagonChart: React.FC<HexagonChartProps> = ({ scores }) => {
-  const size = 220;
+  // 组件尺寸（可根据容器宽度适配，这里取一个在卡片内更清晰的默认尺寸）
+  const size = 260;
   const center = size / 2;
-  const radius = 80;
+  const radius = 90;
 
   // 6个顶点的角度（从顶部开始，顺时针）
   const angles = [0, 60, 120, 180, 240, 300].map(angle => (angle - 90) * Math.PI / 180);
   
   // 标签和对应的分数
   const labels = [
-    { name: '安全规程', score: scores.safety, color: '#ff6b6b' },
-    { name: '信号系统', score: scores.signal, color: '#4ecdc4' },
-    { name: '调度规范', score: scores.dispatch, color: '#45b7d1' },
-    { name: '作业标准', score: scores.operation, color: '#96ceb4' },
-    { name: '应急处理', score: scores.emergency, color: '#ffeaa7' },
-    { name: '设备维护', score: scores.maintenance, color: '#dda0dd' }
+    { name: '安全规程', score: scores.safety, color: '#ef4444' },
+    { name: '信号系统', score: scores.signal, color: '#06b6d4' },
+    { name: '调度规范', score: scores.dispatch, color: '#3b82f6' },
+    { name: '作业标准', score: scores.operation, color: '#22c55e' },
+    { name: '应急处理', score: scores.emergency, color: '#f59e0b' },
+    { name: '设备维护', score: scores.maintenance, color: '#a855f7' }
   ];
 
   // 计算六边形顶点坐标
@@ -88,26 +89,23 @@ const HexagonChart: React.FC<HexagonChartProps> = ({ scores }) => {
 
   return (
     <div style={{
-      background: 'rgba(0,0,0,0.3)',
-      padding: '15px',
-      borderRadius: '12px',
-      backdropFilter: 'blur(10px)',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center'
     }}>
-      <h3 style={{ margin: '0 0 15px 0', fontSize: '17px', color: '#fff', textAlign: 'center' }}>
-        学习领域成绩分析
-      </h3>
-      
-      <svg width={size + 80} height={size + 80} style={{ maxWidth: '100%' }}>
+      <svg
+        viewBox={`0 0 ${size + 80} ${size + 80}`}
+        width="100%"
+        height={size + 80}
+        style={{ maxWidth: 520 }}
+      >
         {/* 背景网格 */}
         {[0.2, 0.4, 0.6, 0.8, 1.0].map((scale, index) => (
           <path
             key={index}
             d={getHexagonPath(scale)}
             fill="none"
-            stroke="rgba(255,255,255,0.1)"
+            stroke="#e5e7eb"
             strokeWidth="1"
           />
         ))}
@@ -123,7 +121,7 @@ const HexagonChart: React.FC<HexagonChartProps> = ({ scores }) => {
               y1={center}
               x2={endX}
               y2={endY}
-              stroke="rgba(255,255,255,0.1)"
+              stroke="#e5e7eb"
               strokeWidth="1"
             />
           );
@@ -132,8 +130,8 @@ const HexagonChart: React.FC<HexagonChartProps> = ({ scores }) => {
         {/* 数据区域 */}
         <path
           d={getScorePath()}
-          fill="rgba(64, 158, 255, 0.3)"
-          stroke="rgba(64, 158, 255, 0.8)"
+          fill="rgba(59, 130, 246, 0.15)"
+          stroke="#3b82f6"
           strokeWidth="2"
         />
 
@@ -173,8 +171,8 @@ const HexagonChart: React.FC<HexagonChartProps> = ({ scores }) => {
               y={pos.y}
               textAnchor="middle"
               dominantBaseline="middle"
-              fill="#fff"
-              fontSize="11"
+              fill="#374151"
+              fontSize="12"
               fontWeight="bold"
             >
               {label.name}
@@ -202,7 +200,7 @@ const HexagonChart: React.FC<HexagonChartProps> = ({ scores }) => {
               textAnchor="middle"
               dominantBaseline="middle"
               fill={label.color}
-              fontSize="12"
+              fontSize="13"
               fontWeight="bold"
             >
               {scoreValues[index]}分
@@ -215,10 +213,10 @@ const HexagonChart: React.FC<HexagonChartProps> = ({ scores }) => {
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(2, 1fr)',
-        gap: '10px',
-        marginTop: '15px',
+        gap: '8px',
+        marginTop: 12,
         width: '100%',
-        maxWidth: '350px'
+        maxWidth: 520
       }}>
         {labels.map((label, index) => {
           const scoreValues = [
@@ -236,10 +234,11 @@ const HexagonChart: React.FC<HexagonChartProps> = ({ scores }) => {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
-                padding: '8px',
-                background: 'rgba(255,255,255,0.1)',
-                borderRadius: '6px'
+                gap: 8,
+                padding: '8px 10px',
+                background: '#f9fafb',
+                border: '1px solid #eef2f7',
+                borderRadius: 8
               }}
             >
               <div
@@ -250,10 +249,10 @@ const HexagonChart: React.FC<HexagonChartProps> = ({ scores }) => {
                   backgroundColor: label.color
                 }}
               />
-              <span style={{ color: '#fff', fontSize: '12px', flex: 1 }}>
+              <span style={{ color: '#374151', fontSize: 12, flex: 1 }}>
                 {label.name}
               </span>
-              <span style={{ color: label.color, fontSize: '12px', fontWeight: 'bold' }}>
+              <span style={{ color: label.color, fontSize: 12, fontWeight: 'bold' }}>
                 {scoreValues[index]}分
               </span>
             </div>

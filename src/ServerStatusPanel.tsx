@@ -251,15 +251,21 @@ const ServerStatusPanel: React.FC = () => {
     }
   };
 
+  // 统一到浅色卡片风格
+  const lightCard: React.CSSProperties = {
+    background: '#fff',
+    border: '1px solid #eef0f4',
+    borderRadius: 16,
+    boxShadow: '0 6px 24px rgba(17,24,39,0.06)'
+  };
+  const subCard: React.CSSProperties = {
+    background: '#f8fafc',
+    border: '1px solid #eef2f7',
+    borderRadius: 10
+  };
+
   return (
-    <div style={{
-      background: 'rgba(255, 255, 255, 0.95)',
-      borderRadius: '12px',
-      padding: '24px',
-      margin: '20px',
-      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-      backdropFilter: 'blur(10px)'
-    }}>
+    <div style={{ ...lightCard, padding: 20 }}>
       <h2 style={{
         color: '#333',
         marginBottom: '20px',
@@ -273,13 +279,7 @@ const ServerStatusPanel: React.FC = () => {
       </h2>
 
       {/* 服务器信息 */}
-      <div style={{
-        background: '#f8f9fa',
-        borderRadius: '8px',
-        padding: '16px',
-        marginBottom: '20px',
-        border: '1px solid #dee2e6'
-      }}>
+      <div style={{ ...subCard, padding: 16, marginBottom: 16 }}>
         <div style={{ marginBottom: '8px' }}>
           <strong>服务器地址:</strong> {serverUrl}
         </div>
@@ -289,16 +289,10 @@ const ServerStatusPanel: React.FC = () => {
       </div>
 
       {/* 状态概览 */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '16px',
-        marginBottom: '24px'
-      }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 16 }}>
         <div style={{
-          background: '#fff',
-          borderRadius: '8px',
-          padding: '16px',
+          ...subCard,
+          padding: 16,
           border: `2px solid ${getStatusColor(status.serverConnection)}`,
           textAlign: 'center'
         }}>
@@ -314,9 +308,8 @@ const ServerStatusPanel: React.FC = () => {
         </div>
 
         <div style={{
-          background: '#fff',
-          borderRadius: '8px',
-          padding: '16px',
+          ...subCard,
+          padding: 16,
           border: `2px solid ${getStatusColor(status.apiStatus)}`,
           textAlign: 'center'
         }}>
@@ -332,9 +325,8 @@ const ServerStatusPanel: React.FC = () => {
         </div>
 
         <div style={{
-          background: '#fff',
-          borderRadius: '8px',
-          padding: '16px',
+          ...subCard,
+          padding: 16,
           border: `2px solid ${getStatusColor(status.corsStatus)}`,
           textAlign: 'center'
         }}>
@@ -350,9 +342,8 @@ const ServerStatusPanel: React.FC = () => {
         </div>
 
         <div style={{
-          background: '#fff',
-          borderRadius: '8px',
-          padding: '16px',
+          ...subCard,
+          padding: 16,
           border: `2px solid ${getStatusColor(status.photoRecognition)}`,
           textAlign: 'center'
         }}>
@@ -369,20 +360,20 @@ const ServerStatusPanel: React.FC = () => {
       </div>
 
       {/* 操作按钮 */}
-      <div style={{ marginBottom: '24px' }}>
+      <div style={{ marginBottom: 16 }}>
         <button
           onClick={runAllTests}
           disabled={isRunningTests}
           style={{
-            background: isRunningTests ? '#6c757d' : '#007bff',
+            background: isRunningTests ? '#9ca3af' : '#111827',
             color: '#fff',
-            border: 'none',
-            padding: '12px 24px',
-            borderRadius: '6px',
-            fontSize: '16px',
+            border: '1px solid #111827',
+            padding: '8px 14px',
+            borderRadius: 10,
+            fontSize: 13,
             cursor: isRunningTests ? 'not-allowed' : 'pointer',
-            fontWeight: '500',
-            marginRight: '12px'
+            fontWeight: 600,
+            marginRight: 8
           }}
         >
           {isRunningTests ? '⏳ 测试中...' : '🔄 重新测试'}
@@ -391,14 +382,14 @@ const ServerStatusPanel: React.FC = () => {
         <button
           onClick={clearTestResults}
           style={{
-            background: '#6c757d',
-            color: '#fff',
-            border: 'none',
-            padding: '12px 24px',
-            borderRadius: '6px',
-            fontSize: '16px',
+            background: '#fff',
+            color: '#111827',
+            border: '1px solid #e5e7eb',
+            padding: '8px 14px',
+            borderRadius: 10,
+            fontSize: 13,
             cursor: 'pointer',
-            fontWeight: '500'
+            fontWeight: 600
           }}
         >
           🗑️ 清除日志
@@ -422,14 +413,7 @@ const ServerStatusPanel: React.FC = () => {
           </span>
         </h3>
         
-        <div style={{
-          background: '#f8f9fa',
-          border: '1px solid #dee2e6',
-          borderRadius: '8px',
-          padding: '16px',
-          maxHeight: '400px',
-          overflowY: 'auto'
-        }}>
+        <div style={{ ...subCard, padding: 16, maxHeight: 400, overflowY: 'auto' }}>
           {testResults.length === 0 ? (
             <div style={{ color: '#666', fontStyle: 'italic', textAlign: 'center', padding: '20px' }}>
               暂无测试记录
@@ -478,7 +462,7 @@ const ServerStatusPanel: React.FC = () => {
       </div>
 
       {/* 快速访问链接 */}
-      <div style={{ marginTop: '24px' }}>
+      <div style={{ marginTop: 16 }}>
         <h3 style={{
           color: '#333',
           marginBottom: '16px',
@@ -488,15 +472,15 @@ const ServerStatusPanel: React.FC = () => {
           🔗 快速访问
         </h3>
         
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <a href={serverUrl} target="_blank" rel="noopener noreferrer">
             <button style={{
-              background: '#28a745',
-              color: '#fff',
-              border: 'none',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              fontSize: '14px',
+              background: '#fff',
+              color: '#111827',
+              border: '1px solid #e5e7eb',
+              padding: '8px 14px',
+              borderRadius: 10,
+              fontSize: 13,
               cursor: 'pointer'
             }}>
               🌐 访问主页面
@@ -505,12 +489,12 @@ const ServerStatusPanel: React.FC = () => {
           
           <a href={`${serverUrl}/camera-test`} target="_blank" rel="noopener noreferrer">
             <button style={{
-              background: '#17a2b8',
-              color: '#fff',
-              border: 'none',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              fontSize: '14px',
+              background: '#fff',
+              color: '#111827',
+              border: '1px solid #e5e7eb',
+              padding: '8px 14px',
+              borderRadius: 10,
+              fontSize: 13,
               cursor: 'pointer'
             }}>
               📷 摄像头测试
@@ -519,12 +503,12 @@ const ServerStatusPanel: React.FC = () => {
           
           <a href={`${serverUrl}/health`} target="_blank" rel="noopener noreferrer">
             <button style={{
-              background: '#6f42c1',
+              background: '#111827',
               color: '#fff',
-              border: 'none',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              fontSize: '14px',
+              border: '1px solid #111827',
+              padding: '8px 14px',
+              borderRadius: 10,
+              fontSize: 13,
               cursor: 'pointer'
             }}>
               🔧 健康检查

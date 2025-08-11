@@ -94,43 +94,19 @@ const ForgotPassword: React.FC = () => {
         请输入您的邮箱地址或用户名，我们将发送重置密码的验证码到您的邮箱
       </p>
       
-      <input
-        type="text"
-        name="email"
-        placeholder="邮箱地址或用户名"
-        value={formData.email}
-        onChange={handleChange}
-        required
-        style={{
-          width: '100%',
-          marginBottom: 20,
-          padding: 12,
-          borderRadius: 8,
-          border: 'none',
-          fontSize: 16,
-          background: '#fff2',
-          color: '#fff'
-        }}
-      />
+      <div className="input-wrap">
+        <input
+          type="text"
+          name="email"
+          placeholder="邮箱地址或用户名"
+          value={formData.email}
+          onChange={handleChange}
+          required
+          className="login-input"
+        />
+      </div>
 
-      <button
-        type="submit"
-        disabled={isLoading}
-        style={{
-          width: '100%',
-          padding: 12,
-          borderRadius: 8,
-          background: isLoading 
-            ? 'rgba(64, 158, 255, 0.6)' 
-            : 'linear-gradient(90deg,#409eff 60%,#2b8cff 100%)',
-          color: '#fff',
-          fontSize: 18,
-          border: 'none',
-          marginBottom: 16,
-          fontWeight: 500,
-          cursor: isLoading ? 'not-allowed' : 'pointer'
-        }}
-      >
+      <button type="submit" disabled={isLoading} className="primary-btn">
         {isLoading ? '发送中...' : '发送验证码'}
       </button>
     </form>
@@ -144,82 +120,44 @@ const ForgotPassword: React.FC = () => {
       </p>
       
       <form onSubmit={handleResetPassword}>
-        <input
-          type="text"
-          name="verificationCode"
-          placeholder="验证码"
-          value={formData.verificationCode}
-          onChange={handleChange}
-          required
-          style={{
-            width: '100%',
-            marginBottom: 16,
-            padding: 12,
-            borderRadius: 8,
-            border: 'none',
-            fontSize: 16,
-            background: '#fff2',
-            color: '#fff'
-          }}
-        />
+        <div className="input-wrap">
+          <input
+            type="text"
+            name="verificationCode"
+            placeholder="验证码"
+            value={formData.verificationCode}
+            onChange={handleChange}
+            required
+            className="login-input"
+          />
+        </div>
         
-        <input
-          type="password"
-          name="newPassword"
-          placeholder="新密码（至少6位）"
-          value={formData.newPassword}
-          onChange={handleChange}
-          required
-          minLength={6}
-          style={{
-            width: '100%',
-            marginBottom: 16,
-            padding: 12,
-            borderRadius: 8,
-            border: 'none',
-            fontSize: 16,
-            background: '#fff2',
-            color: '#fff'
-          }}
-        />
+        <div className="input-wrap">
+          <input
+            type="password"
+            name="newPassword"
+            placeholder="新密码（至少6位）"
+            value={formData.newPassword}
+            onChange={handleChange}
+            required
+            minLength={6}
+            className="login-input"
+          />
+        </div>
         
-        <input
-          type="password"
-          name="confirmPassword"
-          placeholder="确认新密码"
-          value={formData.confirmPassword}
-          onChange={handleChange}
-          required
-          style={{
-            width: '100%',
-            marginBottom: 20,
-            padding: 12,
-            borderRadius: 8,
-            border: 'none',
-            fontSize: 16,
-            background: '#fff2',
-            color: '#fff'
-          }}
-        />
+        <div className="input-wrap">
+          <input
+            type="password"
+            name="confirmPassword"
+            placeholder="确认新密码"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            required
+            className="login-input"
+          />
+        </div>
 
-        <button
-          type="submit"
-          disabled={isLoading}
-          style={{
-            width: '100%',
-            padding: 12,
-            borderRadius: 8,
-            background: isLoading 
-              ? 'rgba(64, 158, 255, 0.6)' 
-              : 'linear-gradient(90deg,#409eff 60%,#2b8cff 100%)',
-            color: '#fff',
-            fontSize: 18,
-            border: 'none',
-            marginBottom: 16,
-            fontWeight: 500,
-            cursor: isLoading ? 'not-allowed' : 'pointer'
-          }}
-        >
+        <button type="submit" disabled={isLoading} className="primary-btn">
           {isLoading ? '重置中...' : '重置密码'}
         </button>
       </form>
