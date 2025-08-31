@@ -22,17 +22,3 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
-# Environment files
-.env
-.env.*
-!.env.example
-env.cloud
-
-# Uploads and coverage
-server/uploads/
-coverage/
-server/coverage/
-
-# Vercel local config
-.vercel/
