@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Safari兼容性测试 - 铁路职工学习平台</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        .test-item {
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .success { background: rgba(76, 175, 80, 0.3); }
+        .error { background: rgba(244, 67, 54, 0.3); }
+        .loading { background: rgba(255, 193, 7, 0.3); }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .log {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Safari兼容性测试</h1>
+        <p>此页面用于测试Safari浏览器对学习平台的兼容性</p>
+        
+        <div id="mime-test" class="test-item loading">
+            <h3>📄 JavaScript MIME类型测试</h3>
+            <p id="mime-status">正在检测...</p>
+        </div>
+        
+        <div id="module-test" class="test-item loading">
+            <h3>🔧 ES模块加载测试</h3>
+            <p id="module-status">正在检测...</p>
+        </div>
+        
+        <div id="api-test" class="test-item loading">
+            <h3>🌐 API连接测试</h3>
+            <p id="api-status">正在检测...</p>
+        </div>
+        
+        <div id="cors-test" class="test-item loading">
+            <h3>🔀 CORS测试</h3>
+            <p id="cors-status">正在检测...</p>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <button onclick="runAllTests()">🔄 重新测试</button>
+            <button onclick="openMainApp()">🚀 打开主应用</button>
+            <button onclick="clearLog()">🧹 清空日志</button>
+        </div>
+        
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        let logContent = '';
+        
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logContent += `[${timestamp}] ${message}\n`;
+            document.getElementById('log').textContent = logContent;
+        }
+        
+        function clearLog() {
+            logContent = '';
+            document.getElementById('log').textContent = '';
+        }
+        
+        function updateStatus(testId, status, message, isSuccess) {
+            const element = document.getElementById(testId);
+            const statusElement = document.getElementById(testId.replace('-test', '-status'));
+            
+            element.className = `test-item ${isSuccess ? 'success' : 'error'}`;
+            statusElement.textContent = message;
+            
+            log(`${testId}: ${status} - ${message}`);
+        }
+        
+        async function testMimeType() {
+            try {
+                const response = await fetch('/assets/index-Bmr-glZ9.js', { method: 'HEAD' });
+                const contentType = response.headers.get('content-type');
+                
+                if (contentType && contentType.includes('application/javascript')) {
+                    updateStatus('mime-test', 'SUCCESS', `✅ MIME类型正确: ${contentType}`, true);
+                    return true;
+                } else {
+                    updateStatus('mime-test', 'ERROR', `❌ MIME类型错误: ${contentType}`, false);
+                    return false;
+                }
+            } catch (error) {
+                updateStatus('mime-test', 'ERROR', `❌ 请求失败: ${error.message}`, false);
+                return false;
+            }
+        }
+        
+        async function testModuleLoading() {
+            try {
+                // 创建一个简单的模块测试
+                const script = document.createElement('script');
+                script.type = 'module';
+                script.textContent = `
+                    window.moduleTestResult = 'success';
+                    console.log('ES Module loaded successfully');
+                `;
+                document.head.appendChild(script);
+                
+                // 等待模块执行
+                setTimeout(() => {
+                    if (window.moduleTestResult === 'success') {
+                        updateStatus('module-test', 'SUCCESS', '✅ ES模块加载成功', true);
+                    } else {
+                        updateStatus('module-test', 'ERROR', '❌ ES模块加载失败', false);
+                    }
+                }, 1000);
+                
+                return true;
+            } catch (error) {
+                updateStatus('module-test', 'ERROR', `❌ 模块测试失败: ${error.message}`, false);
+                return false;
+            }
+        }
+        
+        async function testAPI() {
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                
+                if (data.status === 'ok') {
+                    updateStatus('api-test', 'SUCCESS', `✅ API连接正常 (端口: ${data.port})`, true);
+                    return true;
+                } else {
+                    updateStatus('api-test', 'ERROR', '❌ API状态异常', false);
+                    return false;
+                }
+            } catch (error) {
+                updateStatus('api-test', 'ERROR', `❌ API连接失败: ${error.message}`, false);
+                return false;
+            }
+        }
+        
+        async function testCORS() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                if (data.message) {
+                    updateStatus('cors-test', 'SUCCESS', '✅ CORS配置正常', true);
+                    return true;
+                } else {
+                    updateStatus('cors-test', 'ERROR', '❌ CORS响应异常', false);
+                    return false;
+                }
+            } catch (error) {
+                updateStatus('cors-test', 'ERROR', `❌ CORS测试失败: ${error.message}`, false);
+                return false;
+            }
+        }
+        
+        async function runAllTests() {
+            log('开始运行Safari兼容性测试...');
+            
+            // 重置状态
+            const tests = ['mime-test', 'module-test', 'api-test', 'cors-test'];
+            tests.forEach(testId => {
+                document.getElementById(testId).className = 'test-item loading';
+                document.getElementById(testId.replace('-test', '-status')).textContent = '正在检测...';
+            });
+            
+            const results = await Promise.all([
+                testMimeType(),
+                testModuleLoading(),
+                testAPI(),
+                testCORS()
+            ]);
+            
+            const successCount = results.filter(r => r).length;
+            log(`测试完成: ${successCount}/${results.length} 项测试通过`);
+            
+            if (successCount === results.length) {
+                log('🎉 所有测试通过！Safari兼容性良好，可以正常使用学习平台。');
+            } else {
+                log('⚠️ 部分测试失败，可能影响Safari使用体验。');
+            }
+        }
+        
+        function openMainApp() {
+            window.location.href = '/';
+        }
+        
+        // 页面加载时自动运行测试
+        window.addEventListener('load', () => {
+            log('Safari兼容性测试页面已加载');
+            setTimeout(runAllTests, 1000);
+        });
+        
+        // 检测Safari浏览器
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        if (isSafari) {
+            log('✅ 检测到Safari浏览器');
+        } else {
+            log('ℹ️ 非Safari浏览器，但测试仍然有效');
+        }
+    </script>
+</body>
+</html>
+
+
+
+

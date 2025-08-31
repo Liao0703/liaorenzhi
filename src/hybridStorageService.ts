@@ -1,4 +1,4 @@
-// 混合存储服务 - 本地存储 + 云服务器存储
+// 云端优先存储服务 - 云服务器存储为主，本地存储为缓存
 import { uploadFileToServer, getServerFileList, deleteServerFile, STORAGE_CONFIG } from './fileUploadService';
 
 console.log('🔧 混合存储服务已恢复：本地存储 + 云服务器存储');
@@ -245,64 +245,61 @@ class ServerFileStorage {
 
 // 混合存储服务类 - 本地存储 + 云服务器存储
 export class HybridStorageService {
-  // 文件上传 - 混合存储策略
+  // 文件上传 - 云端优先存储策略
   static async uploadFile(file: File): Promise<FileUploadResult> {
     console.log(`📤 上传文件: ${file.name} (${this.formatBytes(file.size)})`);
     
-    let localResult = null;
     let serverResult = null;
+    let localResult = null;
     
-    // 1. 首先尝试保存到本地存储
+    // 1. 首先必须上传到云服务器（主存储）
     try {
-      console.log('📱 尝试保存到本地存储...');
-      localResult = await LocalFileStorage.saveFile(file);
-      if (localResult.success) {
-        console.log('✅ 本地存储成功');
-      } else {
-        console.warn('⚠️ 本地存储失败:', localResult.error);
-      }
-    } catch (error) {
-      console.warn('⚠️ 本地存储异常:', error);
-    }
-    
-    // 2. 同时尝试上传到云服务器（作为备份）
-    try {
-      console.log('☁️ 同时上传到云服务器...');
+      console.log('☁️ 上传到云数据库服务器...');
       const uploadResult = await uploadFileToServer(file);
       
       if (uploadResult.success) {
         console.log('✅ 云服务器上传成功');
         serverResult = uploadResult;
-        
-        // 如果本地存储成功，将云服务器URL添加到本地记录
-        if (localResult?.success) {
-          this.updateLocalFileWithServerInfo(file.name, uploadResult.fileUrl, uploadResult.fileId);
-        }
       } else {
-        console.warn('⚠️ 云服务器上传失败:', uploadResult.error);
+        console.error('❌ 云服务器上传失败:', uploadResult.error);
+        // 云服务器上传失败直接返回失败
+        return {
+          success: false,
+          error: `云服务器上传失败: ${uploadResult.error}`
+        };
       }
     } catch (error) {
-      console.warn('⚠️ 云服务器上传异常:', error);
-    }
-    
-    // 3. 根据上传结果决定返回内容
-    if (localResult?.success || serverResult?.success) {
-      const fileId = serverResult?.fileId || Date.now().toString();
-      
-      return {
-        success: true,
-        fileUrl: localResult?.url || serverResult?.fileUrl,
-        fileName: serverResult?.fileName || file.name,
-        fileId: fileId,
-        fileType: serverResult?.fileType || file.type,
-        fileSize: serverResult?.fileSize || file.size
-      };
-    } else {
+      console.error('❌ 云服务器上传异常:', error);
       return {
         success: false,
-        error: '本地存储和云服务器上传都失败了'
+        error: `云服务器上传异常: ${error instanceof Error ? error.message : '未知错误'}`
       };
     }
+    
+    // 2. 云服务器上传成功后，尝试保存到本地作为缓存（可选，不影响主功能）
+    try {
+      console.log('📱 尝试保存到本地缓存...');
+      localResult = await LocalFileStorage.saveFile(file);
+      if (localResult.success) {
+        console.log('✅ 本地缓存成功');
+        // 将云服务器URL添加到本地记录
+        this.updateLocalFileWithServerInfo(file.name, serverResult.fileUrl, serverResult.fileId);
+      } else {
+        console.warn('⚠️ 本地缓存失败（不影响主功能）:', localResult.error);
+      }
+    } catch (error) {
+      console.warn('⚠️ 本地缓存异常（不影响主功能）:', error);
+    }
+    
+    // 3. 返回云服务器上传结果
+    return {
+      success: true,
+      fileUrl: serverResult.fileUrl,
+      fileName: serverResult.fileName || file.name,
+      fileId: serverResult.fileId || Date.now().toString(),
+      fileType: serverResult.fileType || file.type,
+      fileSize: serverResult.fileSize || file.size
+    };
   }
 
   // 更新本地文件的服务器信息
@@ -465,18 +462,19 @@ export class HybridStorageService {
     };
   }
 
-  // 获取文件访问URL（智能选择本地或服务器）
+  // 获取文件访问URL（云端优先策略）
   static getFileUrl(file: StorageFile): string {
-    // 优先使用本地URL（速度最快）
+    // 优先使用云服务器URL（确保数据一致性）
+    if (file.serverUrl) {
+      return file.serverUrl;
+    }
+    
+    // 回退到本地缓存URL（仅用于离线场景）
     if (file.localUrl) {
+      console.warn('⚠️ 使用本地缓存文件（云服务器不可用）:', file.name);
       // 更新访问统计
       LocalFileStorage.updateAccessTime(file.id);
       return file.localUrl;
-    }
-    
-    // 回退到服务器URL
-    if (file.serverUrl) {
-      return file.serverUrl;
     }
     
     throw new Error('文件URL不可用');
@@ -491,8 +489,8 @@ export const getStorageStatus = () => {
     ossEnabled: false,
     localEnabled: true,
     serverEnabled: true,
-    currentStorage: 'hybrid',
-    message: '混合存储：本地存储 + 云服务器',
+    currentStorage: 'cloud_first',
+    message: '云端优先存储：云数据库为主，本地缓存为辅',
     localStats: {
       files: localStats.files,
       size: localStats.size,
@@ -503,10 +501,10 @@ export const getStorageStatus = () => {
   };
 };
 
-// 混合存储恢复成功的提示
-console.log('✅ 混合存储已恢复！');
-console.log('📱 本地存储：快速访问，100MB限制');
-console.log('☁️ 云服务器：无限容量，网络备份');
-console.log('🔄 智能策略：本地优先，服务器备份');
+// 云端优先存储已配置成功的提示
+console.log('✅ 云端优先存储已配置！');
+console.log('☁️ 云数据库：主存储，无限容量');
+console.log('📱 本地缓存：快速访问，100MB限制');
+console.log('🔄 云端优先策略：云数据库为主，本地缓存为辅');
 console.log('📊 当前状态:', getStorageStatus()); 
 console.log('📁 云服务器配置:', STORAGE_CONFIG.serverConfig); 

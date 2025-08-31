@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import LeaderBoard from './components/LeaderBoard';
 
 const ForgotPassword: React.FC = () => {
   const [step, setStep] = useState<'input' | 'sent' | 'reset'>('input');
@@ -182,7 +181,6 @@ const ForgotPassword: React.FC = () => {
 
   return (
     <>
-      <LeaderBoard position="login" />
       <div className="login-form-bg" style={{ maxWidth: '400px', margin: '0 auto' }}>
         {step === 'input' && renderInputStep()}
         {step === 'sent' && renderSentStep()}

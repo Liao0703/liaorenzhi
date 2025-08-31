@@ -3,8 +3,46 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const { pool } = require('../config/database');
+const { cacheService } = require('../services/cacheService');
+const { cacheInvalidation } = require('../middleware/cache');
 
 const router = express.Router();
+
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     tags: [认证管理]
+ *     summary: 用户登录
+ *     description: 使用用户名和密码进行登录认证
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/LoginRequest'
+ *     responses:
+ *       200:
+ *         description: 登录成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/LoginResponse'
+ *       401:
+ *         description: 用户名或密码错误
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: 用户名或密码错误
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
+ */
 
 // 用户登录
 router.post('/login', [
@@ -65,6 +103,10 @@ router.post('/login', [
     // 返回用户信息（不包含密码）
     const { password: _, ...userInfo } = user;
 
+    // 缓存用户信息
+    await cacheService.setUserCache(user.id, userInfo, 3600); // 缓存1小时
+    await cacheService.setUserSession(user.id, { token, loginTime: new Date() }, 3600);
+
     res.json({
       success: true,
       message: '登录成功',
@@ -78,8 +120,88 @@ router.post('/login', [
   }
 });
 
-// 用户注册
-router.post('/register', [
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     tags: [认证管理]
+ *     summary: 用户注册
+ *     description: 注册新用户账号
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [username, password, name, role]
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 minLength: 3
+ *                 description: 用户名，至少3个字符
+ *                 example: zhangsan
+ *               password:
+ *                 type: string
+ *                 minLength: 6
+ *                 description: 密码，至少6个字符
+ *                 example: "123456"
+ *               name:
+ *                 type: string
+ *                 description: 姓名
+ *                 example: 张三
+ *               role:
+ *                 type: string
+ *                 enum: [admin, user]
+ *                 description: 用户角色
+ *                 example: user
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: 邮箱
+ *                 example: zhangsan@example.com
+ *               phone:
+ *                 type: string
+ *                 description: 电话号码
+ *                 example: "13812345678"
+ *               department:
+ *                 type: string
+ *                 description: 部门
+ *                 example: 白市驿车站
+ *     responses:
+ *       201:
+ *         description: 注册成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: 用户注册成功
+ *                 userId:
+ *                   type: integer
+ *                   example: 1
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       409:
+ *         description: 用户名已存在
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: 用户名已存在
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
+ */
+
+// 用户注册 (注册后清除用户列表缓存)
+router.post('/register', cacheInvalidation(['users:*']), [
   body('username').isLength({ min: 3 }).withMessage('用户名至少3个字符'),
   body('password').isLength({ min: 6 }).withMessage('密码至少6个字符'),
   body('name').notEmpty().withMessage('姓名不能为空'),
@@ -104,16 +226,16 @@ router.post('/register', [
     );
 
     if (existingUsers.length > 0) {
-      return res.status(400).json({ error: '用户名已存在' });
+      return res.status(409).json({ error: '用户名已存在' });
     }
 
     // 加密密码
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 创建用户
+    // 创建用户（将undefined转换为null以避免MySQL错误）
     const [result] = await pool.execute(
       'INSERT INTO users (username, password, name, role, email, phone, department) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [username, hashedPassword, name, role, email, phone, department]
+      [username, hashedPassword, name, role, email || null, phone || null, department || null]
     );
 
     res.status(201).json({

@@ -1,0 +1,41 @@
+🚀 宝塔Node.js项目配置指南
+
+1. 【宝塔Node项目设置】
+   - 项目类型: Node项目 
+   - 项目目录: /www/wwwroot/learning-platform
+   - 启动选项: start:server
+   - Node版本: 18.x 或 20.x
+   - 包管理器: npm
+
+2. 【需要上传的文件】
+   本地文件 → 服务器路径
+   - server/ → /www/wwwroot/learning-platform/server/
+   - dist/ → /www/wwwroot/learning-platform/dist/  
+   - package.json → /www/wwwroot/learning-platform/package.json
+   - ecosystem.config.js → /www/wwwroot/learning-platform/ecosystem.config.js
+   - .env.example → /www/wwwroot/learning-platform/.env.example
+
+3. 【创建环境变量】
+   复制.env.example为.env，并修改:
+   - 数据库密码
+   - JWT密钥
+   - 域名设置
+
+4. 【创建数据库】
+   - 数据库名: learning_platform
+   - 用户名: learning_platform
+   - 导入: server/init.sql
+
+5. 【配置Nginx】
+   网站设置 → 反向代理
+   - 目标URL: http://127.0.0.1:3001
+   - 发送域名: $host
+
+6. 【启动项目】
+   Node项目管理 → 点击"启动"
+
+7. 【验证部署】
+   - http://47.109.142.72 → 前端页面
+   - http://47.109.142.72/health → API健康检查
+   - http://47.109.142.72/api-docs → API文档
+

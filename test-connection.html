@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>连接测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        .test-result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        h1 { color: #333; }
+        h3 { color: #555; margin-top: 0; }
+    </style>
+</head>
+<body>
+    <h1>🔍 网站连接测试工具</h1>
+    
+    <div class="test-card">
+        <h3>1. 基本连接测试</h3>
+        <button onclick="testBasicConnection()">开始测试</button>
+        <div id="basic-result"></div>
+    </div>
+    
+    <div class="test-card">
+        <h3>2. 资源加载测试</h3>
+        <button onclick="testResources()">测试资源</button>
+        <div id="resources-result"></div>
+    </div>
+    
+    <div class="test-card">
+        <h3>3. API连接测试</h3>
+        <button onclick="testAPI()">测试API</button>
+        <div id="api-result"></div>
+    </div>
+    
+    <div class="test-card">
+        <h3>4. 综合诊断</h3>
+        <button onclick="runFullDiagnosis()">运行完整诊断</button>
+        <div id="diagnosis-result"></div>
+    </div>
+
+    <script>
+        const SERVER_URL = 'http://47.109.142.72';
+        
+        // 1. 基本连接测试
+        async function testBasicConnection() {
+            const resultDiv = document.getElementById('basic-result');
+            resultDiv.innerHTML = '<div class="status info">测试中...</div>';
+            
+            try {
+                const response = await fetch(SERVER_URL, {
+                    method: 'HEAD',
+                    mode: 'no-cors'
+                });
+                
+                // no-cors模式下，我们只能知道请求是否成功，不能读取响应
+                resultDiv.innerHTML = `
+                    <div class="status success">✅ 服务器可达</div>
+                    <div class="test-result">服务器响应正常，但由于CORS限制无法读取详细信息</div>
+                `;
+                
+                // 尝试通过Image加载测试
+                const img = new Image();
+                img.onload = () => {
+                    resultDiv.innerHTML += `<div class="status success">✅ 通过图片测试确认服务器可访问</div>`;
+                };
+                img.onerror = () => {
+                    resultDiv.innerHTML += `<div class="status warning">⚠️ 图片加载失败，但这可能是正常的</div>`;
+                };
+                img.src = SERVER_URL + '/favicon.ico';
+                
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="status error">❌ 连接失败</div>
+                    <div class="test-result">错误: ${error.message}</div>
+                `;
+            }
+        }
+        
+        // 2. 资源加载测试
+        async function testResources() {
+            const resultDiv = document.getElementById('resources-result');
+            resultDiv.innerHTML = '<div class="status info">测试中...</div>';
+            
+            const resources = [
+                '/index.html',
+                '/assets/index-QHscp8ra.js',
+                '/assets/index-IwQEWLhn.css',
+                '/favicon.ico'
+            ];
+            
+            let results = [];
+            
+            for (const resource of resources) {
+                try {
+                    const startTime = Date.now();
+                    const response = await fetch(SERVER_URL + resource, {
+                        method: 'HEAD',
+                        mode: 'no-cors'
+                    });
+                    const endTime = Date.now();
+                    
+                    results.push({
+                        resource,
+                        status: 'success',
+                        time: endTime - startTime
+                    });
+                } catch (error) {
+                    results.push({
+                        resource,
+                        status: 'error',
+                        error: error.message
+                    });
+                }
+            }
+            
+            let html = '<div class="test-result">';
+            for (const result of results) {
+                if (result.status === 'success') {
+                    html += `✅ ${result.resource} - 加载成功 (${result.time}ms)\n`;
+                } else {
+                    html += `❌ ${result.resource} - 加载失败: ${result.error}\n`;
+                }
+            }
+            html += '</div>';
+            
+            const successCount = results.filter(r => r.status === 'success').length;
+            const statusClass = successCount === resources.length ? 'success' : 
+                               successCount > 0 ? 'warning' : 'error';
+            const statusText = successCount === resources.length ? '所有资源正常' : 
+                              `${successCount}/${resources.length} 资源可访问`;
+            
+            resultDiv.innerHTML = `<div class="status ${statusClass}">${statusText}</div>` + html;
+        }
+        
+        // 3. API测试
+        async function testAPI() {
+            const resultDiv = document.getElementById('api-result');
+            resultDiv.innerHTML = '<div class="status info">测试中...</div>';
+            
+            const apis = [
+                { path: '/health', name: '健康检查' },
+                { path: '/api/status', name: 'API状态' }
+            ];
+            
+            let results = [];
+            
+            for (const api of apis) {
+                try {
+                    const response = await fetch(SERVER_URL + api.path);
+                    const data = await response.json();
+                    results.push({
+                        name: api.name,
+                        path: api.path,
+                        status: response.ok ? 'success' : 'error',
+                        statusCode: response.status,
+                        data: data
+                    });
+                } catch (error) {
+                    results.push({
+                        name: api.name,
+                        path: api.path,
+                        status: 'error',
+                        error: error.message
+                    });
+                }
+            }
+            
+            let html = '<div class="test-result">';
+            for (const result of results) {
+                if (result.status === 'success') {
+                    html += `✅ ${result.name} (${result.path}) - HTTP ${result.statusCode}\n`;
+                    html += `响应: ${JSON.stringify(result.data, null, 2)}\n\n`;
+                } else {
+                    html += `❌ ${result.name} (${result.path}) - ${result.error}\n\n`;
+                }
+            }
+            html += '</div>';
+            
+            const successCount = results.filter(r => r.status === 'success').length;
+            const statusClass = successCount === apis.length ? 'success' : 
+                               successCount > 0 ? 'warning' : 'error';
+            
+            resultDiv.innerHTML = `<div class="status ${statusClass}">API测试: ${successCount}/${apis.length} 成功</div>` + html;
+        }
+        
+        // 4. 综合诊断
+        async function runFullDiagnosis() {
+            const resultDiv = document.getElementById('diagnosis-result');
+            resultDiv.innerHTML = '<div class="status info">运行完整诊断...</div>';
+            
+            let diagnosis = {
+                timestamp: new Date().toISOString(),
+                userAgent: navigator.userAgent,
+                connection: navigator.connection ? {
+                    effectiveType: navigator.connection.effectiveType,
+                    downlink: navigator.connection.downlink,
+                    rtt: navigator.connection.rtt
+                } : 'Not available',
+                errors: []
+            };
+            
+            // 测试主页面加载
+            try {
+                const response = await fetch(SERVER_URL);
+                const html = await response.text();
+                diagnosis.homepage = {
+                    status: 'success',
+                    size: html.length,
+                    hasRoot: html.includes('id="root"'),
+                    hasScripts: html.includes('.js'),
+                    hasStyles: html.includes('.css')
+                };
+            } catch (error) {
+                diagnosis.homepage = {
+                    status: 'error',
+                    error: error.message
+                };
+                diagnosis.errors.push(`主页加载失败: ${error.message}`);
+            }
+            
+            // 检查控制台错误
+            if (window.performance && window.performance.getEntriesByType) {
+                const resources = window.performance.getEntriesByType('resource');
+                const failedResources = resources.filter(r => r.transferSize === 0 && r.name.includes(SERVER_URL));
+                if (failedResources.length > 0) {
+                    diagnosis.failedResources = failedResources.map(r => r.name);
+                    diagnosis.errors.push(`${failedResources.length} 个资源加载失败`);
+                }
+            }
+            
+            // 显示诊断结果
+            let html = '<div class="test-result">';
+            html += `诊断时间: ${diagnosis.timestamp}\n`;
+            html += `浏览器: ${diagnosis.userAgent}\n`;
+            html += `网络连接: ${JSON.stringify(diagnosis.connection, null, 2)}\n\n`;
+            
+            if (diagnosis.homepage.status === 'success') {
+                html += `✅ 主页加载成功\n`;
+                html += `  - 页面大小: ${diagnosis.homepage.size} bytes\n`;
+                html += `  - Root元素: ${diagnosis.homepage.hasRoot ? '✓' : '✗'}\n`;
+                html += `  - JS文件: ${diagnosis.homepage.hasScripts ? '✓' : '✗'}\n`;
+                html += `  - CSS文件: ${diagnosis.homepage.hasStyles ? '✓' : '✗'}\n`;
+            } else {
+                html += `❌ 主页加载失败: ${diagnosis.homepage.error}\n`;
+            }
+            
+            if (diagnosis.errors.length > 0) {
+                html += `\n⚠️ 发现 ${diagnosis.errors.length} 个问题:\n`;
+                diagnosis.errors.forEach(error => {
+                    html += `  - ${error}\n`;
+                });
+            } else {
+                html += `\n✅ 未发现明显问题\n`;
+            }
+            
+            html += `\n建议:\n`;
+            if (diagnosis.errors.some(e => e.includes('ERR_CONNECTION'))) {
+                html += `1. 清除浏览器缓存并重试\n`;
+                html += `2. 尝试使用其他浏览器\n`;
+                html += `3. 检查本地网络连接\n`;
+                html += `4. 尝试使用VPN或更换网络\n`;
+            } else {
+                html += `1. 网站基本功能正常\n`;
+                html += `2. 如仍有问题，请查看浏览器控制台\n`;
+            }
+            
+            html += '</div>';
+            
+            const statusClass = diagnosis.errors.length === 0 ? 'success' : 'warning';
+            const statusText = diagnosis.errors.length === 0 ? '诊断完成 - 系统正常' : 
+                              `诊断完成 - 发现 ${diagnosis.errors.length} 个问题`;
+            
+            resultDiv.innerHTML = `<div class="status ${statusClass}">${statusText}</div>` + html;
+        }
+        
+        // 页面加载时自动运行基本测试
+        window.onload = () => {
+            console.log('测试工具已加载，请点击按钮开始测试');
+        };
+    </script>
+</body>
+</html>
+
+
+
+

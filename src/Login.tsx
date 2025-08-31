@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { authAPI } from './config/api';
-import LeaderBoard from './components/LeaderBoard';
 
 interface LoginProps {
   onLoginSuccess: (user: any) => void;
@@ -14,7 +13,6 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [showHelp, setShowHelp] = useState(false);
-  // 排行榜默认显示在左下角（组件内部 fixed 定位）
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +26,11 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
       // 检查响应是否成功
       if (data.success === false) {
-        setError(data.error || '登录失败');
+        const friendlyMessage =
+          (typeof data?.statusCode === 'number' && data.statusCode === 401)
+            ? '账号或密码错误'
+            : (data.error || '登录失败');
+        setError(friendlyMessage);
         return;
       }
 
@@ -49,11 +51,10 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
   return (
     <>
-      <LeaderBoard />
       <div className="split-hero">
         <div className="split-left">
           <div className="welcome-big">欢迎使用</div>
-          <div className="welcome-small">班前学习系统</div>
+          <div className="welcome-small">兴站智训通</div>
         </div>
 
         <form className="login-form-bg split-right" onSubmit={handleLogin}>

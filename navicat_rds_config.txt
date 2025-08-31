@@ -1,0 +1,29 @@
+=== Navicat连接配置信息 ===
+
+直接连接配置（需要添加白名单）：
+- 连接名: 学习平台RDS数据库
+- 主机: rm-cn-7js4el1by00015fo.rwlb.cn-chengdu.rds.aliyuncs.com
+- 端口: 3306
+- 用户名: admin123
+- 密码: Liao0820
+- 数据库: learning_platform
+
+SSH隧道连接配置（推荐）：
+【常规】选项卡:
+- 连接名: 学习平台RDS数据库(SSH)
+- 主机: localhost
+- 端口: 3306
+- 用户名: admin123
+- 密码: Liao0820
+- 数据库: learning_platform
+
+【SSH】选项卡:
+- 使用SSH隧道: ✓
+- SSH主机: 47.109.142.72
+- SSH端口: 22
+- 用户名: root
+- 验证方法: 密码
+- 密码: [你的服务器密码]
+
+你的当前IP: 116.162.214.117
+需要添加到白名单的IP: 116.162.214.117

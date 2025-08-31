@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理 - 真实数据库</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .main-content {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(90deg, #409eff 60%, #2b8cff 100%);
+            color: white;
+        }
+        
+        .btn-success {
+            background: linear-gradient(90deg, #67c23a 60%, #5cb85c 100%);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(90deg, #f56c6c 60%, #e74c3c 100%);
+            color: white;
+        }
+        
+        .btn-warning {
+            background: linear-gradient(90deg, #e6a23c 60%, #f0ad4e 100%);
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        th {
+            background: #f5f7fa;
+            color: #606266;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #e4e7ed;
+        }
+        
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+            color: #606266;
+        }
+        
+        tr:hover {
+            background: #f5f7fa;
+        }
+        
+        .role-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .role-admin {
+            background: #fef0f0;
+            color: #f56c6c;
+        }
+        
+        .role-maintenance {
+            background: #fdf6ec;
+            color: #e6a23c;
+        }
+        
+        .role-user {
+            background: #f0f9ff;
+            color: #409eff;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #606266;
+            font-weight: 500;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #dcdfe6;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #409eff;
+        }
+        
+        select.form-control {
+            cursor: pointer;
+        }
+        
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e4e7ed;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #909399;
+        }
+        
+        .error {
+            background: #fef0f0;
+            border: 1px solid #fde2e2;
+            color: #f56c6c;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .success {
+            background: #f0f9ff;
+            border: 1px solid #d9ecff;
+            color: #409eff;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            border-left: 4px solid #409eff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-card h3 {
+            color: #909399;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #303133;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .search-box input {
+            flex: 1;
+            max-width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <div>
+                <h1>🔧 用户账号管理 - 真实数据库</h1>
+                <p style="margin-top: 8px; opacity: 0.9;">直接连接阿里云RDS数据库</p>
+            </div>
+            <div>
+                <span id="connectionStatus" style="margin-right: 20px;">
+                    🔴 未连接
+                </span>
+                <button class="btn btn-danger" onclick="logout()">退出登录</button>
+            </div>
+        </div>
+
+        <!-- 主内容 -->
+        <div class="main-content">
+            <!-- 统计信息 -->
+            <div class="stats" id="stats">
+                <div class="stat-card">
+                    <h3>总用户数</h3>
+                    <div class="value" id="totalUsers">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>管理员</h3>
+                    <div class="value" id="adminCount">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>维护人员</h3>
+                    <div class="value" id="maintenanceCount">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>普通用户</h3>
+                    <div class="value" id="userCount">-</div>
+                </div>
+            </div>
+
+            <!-- 搜索栏 -->
+            <div class="search-box">
+                <input type="text" class="form-control" id="searchInput" placeholder="搜索用户名、姓名、工号...">
+                <button class="btn btn-primary" onclick="searchUsers()">搜索</button>
+                <button class="btn" onclick="clearSearch()">清空</button>
+            </div>
+
+            <!-- 工具栏 -->
+            <div class="toolbar">
+                <h2>用户列表</h2>
+                <div>
+                    <button class="btn btn-success" onclick="refreshUsers()">🔄 刷新</button>
+                    <button class="btn btn-primary" onclick="showAddModal()">➕ 添加用户</button>
+                </div>
+            </div>
+
+            <!-- 消息提示 -->
+            <div id="message"></div>
+
+            <!-- 用户表格 -->
+            <div id="tableContainer">
+                <div class="loading">正在加载用户数据...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加/编辑用户模态框 -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitle">添加用户</h2>
+            <form id="userForm">
+                <input type="hidden" id="userId">
+                
+                <div class="form-group">
+                    <label>用户名 *</label>
+                    <input type="text" class="form-control" id="username" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>密码 <span id="passwordHint">(留空则不修改)</span></label>
+                    <input type="password" class="form-control" id="password">
+                </div>
+                
+                <div class="form-group">
+                    <label>姓名 *</label>
+                    <input type="text" class="form-control" id="name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>角色 *</label>
+                    <select class="form-control" id="role" required>
+                        <option value="user">普通用户</option>
+                        <option value="maintenance">维护人员</option>
+                        <option value="admin">管理员</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>工号</label>
+                    <input type="text" class="form-control" id="employee_id">
+                </div>
+                
+                <div class="form-group">
+                    <label>部门</label>
+                    <select class="form-control" id="department">
+                        <option value="白市驿车站">白市驿车站</option>
+                        <option value="机务段">机务段</option>
+                        <option value="车务段">车务段</option>
+                        <option value="工务段">工务段</option>
+                        <option value="电务段">电务段</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>班组</label>
+                    <select class="form-control" id="team">
+                        <option value="">请选择</option>
+                        <option value="运转一班">运转一班</option>
+                        <option value="运转二班">运转二班</option>
+                        <option value="运转三班">运转三班</option>
+                        <option value="运转四班">运转四班</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>工种</label>
+                    <select class="form-control" id="job_type">
+                        <option value="">请选择</option>
+                        <option value="车站值班员">车站值班员</option>
+                        <option value="助理值班员（内勤）">助理值班员（内勤）</option>
+                        <option value="助理值班员（外勤）">助理值班员（外勤）</option>
+                        <option value="连结员">连结员</option>
+                        <option value="调车长">调车长</option>
+                        <option value="列尾作业员">列尾作业员</option>
+                        <option value="站调">站调</option>
+                        <option value="车号员">车号员</option>
+                        <option value="司机">司机</option>
+                        <option value="调度员">调度员</option>
+                        <option value="信号工">信号工</option>
+                        <option value="检车员">检车员</option>
+                        <option value="线路工">线路工</option>
+                        <option value="系统管理员">系统管理员</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>邮箱</label>
+                    <input type="email" class="form-control" id="email">
+                </div>
+                
+                <div class="form-group">
+                    <label>电话</label>
+                    <input type="tel" class="form-control" id="phone">
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="hideModal()">取消</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // API配置
+        const API_BASE = window.location.hostname === 'localhost' 
+            ? 'http://localhost:3002/api'
+            : '/api';
+
+        let allUsers = [];
+        let filteredUsers = [];
+
+        // 获取token
+        function getToken() {
+            return localStorage.getItem('auth_token');
+        }
+
+        // API请求封装
+        async function apiRequest(url, options = {}) {
+            const token = getToken();
+            const headers = {
+                'Content-Type': 'application/json',
+                ...options.headers
+            };
+            
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}${url}`, {
+                    ...options,
+                    headers
+                });
+
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || `HTTP ${response.status}`);
+                }
+                
+                return data;
+            } catch (error) {
+                console.error('API请求失败:', error);
+                throw error;
+            }
+        }
+
+        // 加载用户列表
+        async function loadUsers() {
+            try {
+                document.getElementById('tableContainer').innerHTML = '<div class="loading">正在加载用户数据...</div>';
+                document.getElementById('connectionStatus').innerHTML = '🟡 连接中...';
+                
+                const response = await apiRequest('/users');
+                
+                if (response.success && response.data) {
+                    allUsers = response.data;
+                    filteredUsers = allUsers;
+                    document.getElementById('connectionStatus').innerHTML = '🟢 已连接';
+                    updateStats();
+                    renderTable();
+                } else {
+                    throw new Error('获取用户列表失败');
+                }
+            } catch (error) {
+                document.getElementById('connectionStatus').innerHTML = '🔴 连接失败';
+                showMessage('error', '加载用户失败: ' + error.message);
+                document.getElementById('tableContainer').innerHTML = 
+                    '<div class="error">加载失败，请检查数据库连接</div>';
+            }
+        }
+
+        // 更新统计信息
+        function updateStats() {
+            const stats = {
+                total: allUsers.length,
+                admin: allUsers.filter(u => u.role === 'admin').length,
+                maintenance: allUsers.filter(u => u.role === 'maintenance').length,
+                user: allUsers.filter(u => u.role === 'user').length
+            };
+            
+            document.getElementById('totalUsers').textContent = stats.total;
+            document.getElementById('adminCount').textContent = stats.admin;
+            document.getElementById('maintenanceCount').textContent = stats.maintenance;
+            document.getElementById('userCount').textContent = stats.user;
+        }
+
+        // 渲染表格
+        function renderTable() {
+            const html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>用户名</th>
+                            <th>姓名</th>
+                            <th>角色</th>
+                            <th>工号</th>
+                            <th>部门</th>
+                            <th>班组</th>
+                            <th>工种</th>
+                            <th>邮箱</th>
+                            <th>电话</th>
+                            <th>注册时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filteredUsers.map(user => `
+                            <tr>
+                                <td>${user.id}</td>
+                                <td><strong>${user.username}</strong></td>
+                                <td>${user.name || '-'}</td>
+                                <td><span class="role-badge role-${user.role}">${getRoleName(user.role)}</span></td>
+                                <td>${user.employee_id || '-'}</td>
+                                <td>${user.department || '-'}</td>
+                                <td>${user.team || '-'}</td>
+                                <td>${user.job_type || '-'}</td>
+                                <td>${user.email || '-'}</td>
+                                <td>${user.phone || '-'}</td>
+                                <td>${formatDate(user.created_at)}</td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn btn-warning btn-small" onclick="editUser(${user.id})">编辑</button>
+                                        <button class="btn btn-success btn-small" onclick="resetPassword(${user.id})">重置密码</button>
+                                        <button class="btn btn-danger btn-small" onclick="deleteUser(${user.id})">删除</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            document.getElementById('tableContainer').innerHTML = html;
+        }
+
+        // 搜索用户
+        function searchUsers() {
+            const keyword = document.getElementById('searchInput').value.toLowerCase();
+            
+            if (!keyword) {
+                filteredUsers = allUsers;
+            } else {
+                filteredUsers = allUsers.filter(user => 
+                    user.username.toLowerCase().includes(keyword) ||
+                    (user.name && user.name.toLowerCase().includes(keyword)) ||
+                    (user.employee_id && user.employee_id.toLowerCase().includes(keyword)) ||
+                    (user.department && user.department.toLowerCase().includes(keyword)) ||
+                    (user.job_type && user.job_type.toLowerCase().includes(keyword))
+                );
+            }
+            
+            renderTable();
+        }
+
+        // 清空搜索
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            filteredUsers = allUsers;
+            renderTable();
+        }
+
+        // 显示添加模态框
+        function showAddModal() {
+            document.getElementById('modalTitle').textContent = '添加用户';
+            document.getElementById('userForm').reset();
+            document.getElementById('userId').value = '';
+            document.getElementById('username').disabled = false;
+            document.getElementById('passwordHint').style.display = 'none';
+            document.getElementById('password').required = true;
+            document.getElementById('userModal').classList.add('show');
+        }
+
+        // 编辑用户
+        function editUser(id) {
+            const user = allUsers.find(u => u.id === id);
+            if (!user) return;
+            
+            document.getElementById('modalTitle').textContent = '编辑用户';
+            document.getElementById('userId').value = user.id;
+            document.getElementById('username').value = user.username;
+            document.getElementById('username').disabled = true;
+            document.getElementById('password').value = '';
+            document.getElementById('password').required = false;
+            document.getElementById('passwordHint').style.display = 'inline';
+            document.getElementById('name').value = user.name || '';
+            document.getElementById('role').value = user.role || 'user';
+            document.getElementById('employee_id').value = user.employee_id || '';
+            document.getElementById('department').value = user.department || '白市驿车站';
+            document.getElementById('team').value = user.team || '';
+            document.getElementById('job_type').value = user.job_type || '';
+            document.getElementById('email').value = user.email || '';
+            document.getElementById('phone').value = user.phone || '';
+            
+            document.getElementById('userModal').classList.add('show');
+        }
+
+        // 隐藏模态框
+        function hideModal() {
+            document.getElementById('userModal').classList.remove('show');
+        }
+
+        // 保存用户
+        document.getElementById('userForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const userId = document.getElementById('userId').value;
+            const formData = {
+                username: document.getElementById('username').value,
+                name: document.getElementById('name').value,
+                role: document.getElementById('role').value,
+                employee_id: document.getElementById('employee_id').value,
+                department: document.getElementById('department').value,
+                team: document.getElementById('team').value,
+                job_type: document.getElementById('job_type').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                full_name: document.getElementById('name').value,
+                company: '兴隆村车站'
+            };
+            
+            const password = document.getElementById('password').value;
+            if (password) {
+                formData.password = password;
+            }
+            
+            try {
+                if (userId) {
+                    // 更新用户
+                    await apiRequest(`/users/${userId}`, {
+                        method: 'PUT',
+                        body: JSON.stringify(formData)
+                    });
+                    showMessage('success', '用户更新成功');
+                } else {
+                    // 创建用户
+                    if (!password) {
+                        alert('新用户必须设置密码');
+                        return;
+                    }
+                    await apiRequest('/users', {
+                        method: 'POST',
+                        body: JSON.stringify(formData)
+                    });
+                    showMessage('success', '用户创建成功');
+                }
+                
+                hideModal();
+                loadUsers();
+            } catch (error) {
+                showMessage('error', '保存失败: ' + error.message);
+            }
+        });
+
+        // 重置密码
+        async function resetPassword(id) {
+            const user = allUsers.find(u => u.id === id);
+            if (!user) return;
+            
+            const newPassword = prompt(`重置用户 ${user.username} 的密码为：`, '123456');
+            if (!newPassword) return;
+            
+            try {
+                await apiRequest(`/users/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        name: user.name,
+                        full_name: user.full_name || user.name,
+                        password: newPassword,
+                        employee_id: user.employee_id,
+                        company: user.company || '兴隆村车站',
+                        department: user.department,
+                        team: user.team,
+                        job_type: user.job_type,
+                        email: user.email,
+                        phone: user.phone
+                    })
+                });
+                showMessage('success', `密码已重置为: ${newPassword}`);
+            } catch (error) {
+                showMessage('error', '密码重置失败: ' + error.message);
+            }
+        }
+
+        // 删除用户
+        async function deleteUser(id) {
+            const user = allUsers.find(u => u.id === id);
+            if (!user) return;
+            
+            if (!confirm(`确定要删除用户 ${user.username} (${user.name}) 吗？`)) {
+                return;
+            }
+            
+            try {
+                await apiRequest(`/users/${id}`, {
+                    method: 'DELETE'
+                });
+                showMessage('success', '用户已删除');
+                loadUsers();
+            } catch (error) {
+                showMessage('error', '删除失败: ' + error.message);
+            }
+        }
+
+        // 刷新用户列表
+        function refreshUsers() {
+            loadUsers();
+        }
+
+        // 显示消息
+        function showMessage(type, message) {
+            const messageEl = document.getElementById('message');
+            messageEl.className = type;
+            messageEl.textContent = message;
+            
+            setTimeout(() => {
+                messageEl.className = '';
+                messageEl.textContent = '';
+            }, 3000);
+        }
+
+        // 获取角色名称
+        function getRoleName(role) {
+            const roleMap = {
+                admin: '管理员',
+                maintenance: '维护人员',
+                user: '普通用户'
+            };
+            return roleMap[role] || role;
+        }
+
+        // 格式化日期
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('zh-CN') + ' ' + date.toLocaleTimeString('zh-CN');
+        }
+
+        // 退出登录
+        function logout() {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user');
+            window.location.href = '/';
+        }
+
+        // 页面加载时执行
+        window.addEventListener('DOMContentLoaded', () => {
+            // 检查是否已登录
+            if (!getToken()) {
+                alert('请先登录');
+                window.location.href = '/';
+                return;
+            }
+            
+            // 加载用户数据
+            loadUsers();
+            
+            // 定时刷新（每30秒）
+            setInterval(loadUsers, 30000);
+        });
+
+        // 点击模态框外部关闭
+        document.getElementById('userModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('userModal')) {
+                hideModal();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -4,26 +4,128 @@ const { pool } = require('../config/database');
 
 const router = express.Router();
 
-// 获取所有照片
+// 获取照片（支持分页与搜索）
 router.get('/', async (req, res) => {
   try {
-    const [photos] = await pool.execute(`
-      SELECT p.*, u.name as user_name, a.title as article_title 
-      FROM photos p 
-      LEFT JOIN users u ON p.user_id = u.id 
-      LEFT JOIN articles a ON p.article_id = a.id 
-      ORDER BY p.created_at DESC
-    `);
-    
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 100);
+    const offset = (page - 1) * limit;
+    const q = (req.query.q || '').toString().trim();
+    const start = req.query.start ? new Date(req.query.start) : null;
+    const end = req.query.end ? new Date(req.query.end) : null;
+
+    const whereClauses = [];
+    const params = [];
+
+    if (q) {
+      whereClauses.push('(u.name LIKE ? OR a.title LIKE ? OR p.file_name LIKE ?)');
+      params.push(`%${q}%`, `%${q}%`, `%${q}%`);
+    }
+    if (start && !isNaN(start.getTime())) {
+      whereClauses.push('p.created_at >= ?');
+      params.push(start);
+    }
+    if (end && !isNaN(end.getTime())) {
+      whereClauses.push('p.created_at <= ?');
+      params.push(end);
+    }
+
+    const whereSql = whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+    const [[{ total }]] = await pool.execute(
+      `SELECT COUNT(*) as total
+       FROM photos p
+       LEFT JOIN users u ON p.user_id = u.id
+       LEFT JOIN articles a ON p.article_id = a.id
+       ${whereSql}`,
+      params
+    );
+
+    const [rows] = await pool.execute(
+      `SELECT p.*, u.name as user_name, a.title as article_title
+       FROM photos p
+       LEFT JOIN users u ON p.user_id = u.id
+       LEFT JOIN articles a ON p.article_id = a.id
+       ${whereSql}
+       ORDER BY p.created_at DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+
     res.json({
       success: true,
-      data: photos
+      data: { items: rows, page, limit, total, hasNext: offset + rows.length < total }
     });
   } catch (error) {
     console.error('获取照片列表失败:', error);
     res.status(500).json({ error: '服务器内部错误' });
   }
 });
+
+// 导出照片为CSV（支持与列表相同的筛选）
+router.get('/export', async (req, res) => {
+  try {
+    const q = (req.query.q || '').toString().trim();
+    const start = req.query.start ? new Date(req.query.start) : null;
+    const end = req.query.end ? new Date(req.query.end) : null;
+
+    const whereClauses = [];
+    const params = [];
+
+    if (q) {
+      whereClauses.push('(u.name LIKE ? OR a.title LIKE ? OR p.file_name LIKE ?)');
+      params.push(`%${q}%`, `%${q}%`, `%${q}%`);
+    }
+    if (start && !isNaN(start.getTime())) {
+      whereClauses.push('p.created_at >= ?');
+      params.push(start);
+    }
+    if (end && !isNaN(end.getTime())) {
+      whereClauses.push('p.created_at <= ?');
+      params.push(end);
+    }
+    const whereSql = whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+    const [rows] = await pool.execute(
+      `SELECT p.id, u.name AS user_name, a.title AS article_title, p.created_at, p.file_name, p.file_size
+       FROM photos p
+       LEFT JOIN users u ON p.user_id = u.id
+       LEFT JOIN articles a ON p.article_id = a.id
+       ${whereSql}
+       ORDER BY p.created_at DESC`,
+      params
+    );
+
+    // 生成CSV
+    const header = 'ID,用户,文章,拍摄时间,文件名,大小(字节)';
+    const lines = rows.map(r => [
+      r.id,
+      safeCsv(r.user_name),
+      safeCsv(r.article_title),
+      formatDate(r.created_at),
+      safeCsv(r.file_name),
+      r.file_size || ''
+    ].join(','));
+    const csv = [header, ...lines].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename=photos_${Date.now()}.csv`);
+    res.send('\ufeff' + csv); // BOM 以支持中文
+  } catch (error) {
+    console.error('导出照片失败:', error);
+    res.status(500).json({ success: false, error: '导出失败' });
+  }
+});
+
+function safeCsv(val) {
+  if (val == null) return '';
+  const s = String(val);
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+function formatDate(d) {
+  try { return new Date(d).toLocaleString('zh-CN'); } catch { return ''; }
+}
 
 // 获取单个照片
 router.get('/:id', async (req, res) => {

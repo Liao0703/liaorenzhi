@@ -83,7 +83,7 @@ export const backupData = () => {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `学习系统备份_${new Date().toISOString().split('T')[0]}.json`;
+  a.download = `兴站智训通备份_${new Date().toISOString().split('T')[0]}.json`;
   a.click();
   URL.revokeObjectURL(url);
 };

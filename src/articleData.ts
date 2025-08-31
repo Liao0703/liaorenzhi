@@ -1,3 +1,5 @@
+import type { JobType } from './config/jobTypes';
+
 // 文章数据存储 - 模拟数据库
 export interface ArticleData {
   id: string;
@@ -11,6 +13,7 @@ export interface ArticleData {
   fileName?: string; // 原始文件名
   fileId?: string; // 混合存储文件ID
   storageType?: 'local' | 'oss' | 'hybrid'; // 存储类型
+  allowedJobTypes?: JobType[]; // 允许访问的工种，为空表示所有工种都可以访问
 }
 
 export interface Question {

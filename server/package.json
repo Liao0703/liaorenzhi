@@ -1,12 +1,16 @@
 {
   "name": "learning-platform-server",
   "version": "1.0.0",
-  "description": "铁路职工学习平台后端服务",
+  "description": "兴站智训通后端服务",
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
-    "test": "jest"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:verbose": "jest --verbose",
+    "test:silent": "SILENT_TESTS=true jest"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -16,15 +20,26 @@
     "express-rate-limit": "^7.1.5",
     "express-validator": "^7.0.1",
     "helmet": "^7.1.0",
+    "ioredis": "^5.7.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
     "mysql2": "^3.6.5",
-    "uuid": "^11.1.0"
+    "node-cache": "^5.1.2",
+    "node-cron": "^4.2.1",
+    "nodemailer": "^7.0.5",
+    "redis": "^5.8.1",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
+    "systeminformation": "^5.27.7",
+    "uuid": "^11.1.0",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "jest": "^29.7.0",
-    "nodemon": "^3.0.2"
+    "jest-environment-node": "^30.0.5",
+    "nodemon": "^3.0.2",
+    "supertest": "^7.1.4"
   },
   "keywords": [
     "learning-platform",
@@ -32,6 +47,6 @@
     "education",
     "api"
   ],
-  "author": "Railway Learning Platform",
+  "author": "兴站智训通",
   "license": "MIT"
 }

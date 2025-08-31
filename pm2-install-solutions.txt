@@ -1,0 +1,41 @@
+# PM2安装解决方案 - 服务器npm镜像源问题
+
+## 方案1：使用npm官方源
+npm install -g pm2 --registry https://registry.npmjs.org/
+
+## 方案2：使用淘宝镜像源
+npm install -g pm2 --registry https://registry.npmmirror.com/
+
+## 方案3：先设置镜像源再安装
+npm config set registry https://registry.npmjs.org/
+npm install -g pm2
+# 恢复原镜像源（可选）
+npm config set registry https://cdn.npmmirror.com/
+
+## 方案4：使用cnpm
+npm install -g cnpm --registry https://registry.npmmirror.com/
+cnpm install -g pm2
+
+## 方案5：本地安装（推荐）
+cd /www/wwwroot/learning-platform/server
+npm install pm2 --registry https://registry.npmjs.org/
+# 然后使用npx运行
+npx pm2 start app-simple.js --name learning-platform -- --port 3002
+
+## 方案6：使用yarn（如果已安装）
+yarn global add pm2
+
+## 方案7：直接下载安装
+cd /tmp
+wget https://registry.npmjs.org/pm2/-/pm2-5.3.0.tgz
+npm install -g pm2-5.3.0.tgz
+
+## 启动应用（本地安装后）
+cd /www/wwwroot/learning-platform/server
+# 如果是全局安装
+pm2 start app-simple.js --name learning-platform -- --port 3002
+# 如果是本地安装
+npx pm2 start app-simple.js --name learning-platform -- --port 3002
+
+## 查看状态
+npx pm2 status

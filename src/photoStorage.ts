@@ -1,4 +1,5 @@
 // 照片存储管理
+// ⚠️ 注意：学习记录功能已迁移到云数据库，请使用 learningRecordAPI 进行操作
 export interface PhotoRecord {
   id: string;
   timestamp: string;
@@ -41,16 +42,9 @@ const loadPhotosFromStorage = () => {
   }
 };
 
-// 从localStorage加载用户学习记录
+// 从云数据库加载用户学习记录（已废弃，现在通过API直接调用）
 const loadLearningRecordsFromStorage = () => {
-  try {
-    const stored = localStorage.getItem('learning_records');
-    if (stored) {
-      userLearningRecords = JSON.parse(stored);
-    }
-  } catch (error) {
-    console.error('加载学习记录失败:', error);
-  }
+  console.log('📊 学习记录已迁移到云数据库，不再使用本地存储');
 };
 
 // 保存照片数据到localStorage
@@ -62,13 +56,9 @@ const savePhotosToStorage = () => {
   }
 };
 
-// 保存学习记录到localStorage
+// 保存学习记录到云数据库（已废弃，现在通过API直接调用）
 const saveLearningRecordsToStorage = () => {
-  try {
-    localStorage.setItem('learning_records', JSON.stringify(userLearningRecords));
-  } catch (error) {
-    console.error('保存学习记录失败:', error);
-  }
+  console.log('📊 学习记录已迁移到云数据库，不再使用本地存储');
 };
 
 // 初始化时加载数据
@@ -112,7 +102,7 @@ export const savePhoto = (
   return photoRecord;
 };
 
-// 保存用户学习记录
+// 保存用户学习记录（已迁移到云数据库）
 export const saveUserLearningRecord = (
   userId: string,
   userName: string,
@@ -123,6 +113,8 @@ export const saveUserLearningRecord = (
   photos: PhotoRecord[],
   status: 'completed' | 'failed' = 'completed'
 ): UserLearningRecord => {
+  console.warn('⚠️ saveUserLearningRecord 已弃用，请使用 learningRecordAPI.create() 通过云数据库API保存学习记录');
+  
   const record: UserLearningRecord = {
     userId,
     userName,
@@ -135,18 +127,9 @@ export const saveUserLearningRecord = (
     status
   };
   
-  // 检查是否已存在相同记录，如果存在则更新
-  const existingIndex = userLearningRecords.findIndex(
-    r => r.userId === userId && r.articleId === articleId
-  );
+  // 不再保存到本地存储，提醒使用云端API
+  console.log('📊 学习记录应通过云端API保存:', record);
   
-  if (existingIndex !== -1) {
-    userLearningRecords[existingIndex] = record;
-  } else {
-    userLearningRecords.push(record);
-  }
-  
-  saveLearningRecordsToStorage();
   return record;
 };
 
@@ -165,8 +148,10 @@ export const getPhotosByUserId = (userId: string): PhotoRecord[] => {
   return photoStorage.filter(photo => photo.userId === userId);
 };
 
-// 获取用户学习记录
+// 获取用户学习记录（已迁移到云数据库）
 export const getUserLearningRecords = (userId?: string): UserLearningRecord[] => {
+  console.warn('⚠️ getUserLearningRecords 已弃用，请使用 learningRecordAPI.getByUserId() 或 learningRecordAPI.getAll() 从云数据库获取学习记录');
+  
   if (userId) {
     return userLearningRecords.filter(record => record.userId === userId);
   }

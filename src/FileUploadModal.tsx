@@ -1,7 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { HybridStorageService } from './hybridStorageService';
-// import type { StorageFile } from './hybridStorageService';
-import { isFileTypeSupported, getFileType } from './fileUploadService';
+import { uploadFileToServer, isFileTypeSupported, getFileType } from './fileUploadService';
 import type { FileUploadResult } from './fileUploadService';
 
 export interface FileInfo {
@@ -77,15 +75,16 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({ show, onClose, onFile
         });
       }, 200);
 
-      // 使用混合存储服务上传文件
-      const storageFile = await HybridStorageService.uploadFile(file);
+      // 直接上传到云服务器
+      const storageFile = await uploadFileToServer(file);
       
       clearInterval(progressInterval);
       setUploadProgress(100);
       setUploadResult({
-        success: true,
+        success: storageFile.success,
         fileUrl: storageFile.fileUrl || '',
-        fileName: storageFile.fileName || file.name
+        fileName: storageFile.fileName || file.name,
+        error: storageFile.error
       });
 
       if (storageFile.success) {
@@ -98,7 +97,7 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({ show, onClose, onFile
           fileType: getFileType(file.type),
           fileName: storageFile.fileName || file.name,
           fileId: storageFile.fileId || Date.now().toString(),
-          storageType: 'hybrid'
+          storageType: 'server'
         };
         
         onFileUploaded(fileInfo);
@@ -359,7 +358,7 @@ const FileUploadModal: React.FC<FileUploadModalProps> = ({ show, onClose, onFile
           textAlign: 'center',
           lineHeight: '1.3'
         }}>
-          文件将上传到云服务器，支持在线预览和下载
+          文件将直接上传到云数据库服务器，支持在线预览和下载
         </div>
       </div>
     </div>

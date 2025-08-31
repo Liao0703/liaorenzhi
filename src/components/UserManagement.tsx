@@ -13,6 +13,7 @@ interface User {
   username: string;
   name: string;
   full_name?: string;
+  role?: 'admin' | 'maintenance' | 'user';
   employee_id?: string;
   department?: string;
   team?: string;
@@ -37,6 +38,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
     password: '',
     name: '',
     full_name: '',
+    role: 'user' as 'admin' | 'maintenance' | 'user',
     employee_id: '',
     department: '白市驿车站',
     team: '',
@@ -56,12 +58,28 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
   const loadUsers = async () => {
     setLoading(true);
     try {
+      console.log('🔄 正在加载用户列表...');
+      const token = localStorage.getItem('auth_token');
+      console.log('📌 当前Token:', token ? '存在' : '不存在');
+      
       const response = await userAPI.getAll();
+      console.log('📋 API响应:', response);
+      
       if (response.success && response.data) {
         setUsers(response.data);
+        console.log('✅ 成功加载', response.data.length, '个用户');
+      } else if (response.statusCode === 401) {
+        console.error('❌ 认证失败:', response.error);
+        alert('认证失败，请重新登录');
+        // 可选：重定向到登录页
+        // window.location.href = '/';
+      } else {
+        console.error('❌ 加载失败:', response.error);
+        alert('加载用户列表失败: ' + (response.error || '未知错误'));
       }
     } catch (error) {
-      console.error('加载用户列表失败:', error);
+      console.error('❌ 加载用户列表异常:', error);
+      alert('网络错误，请检查服务器连接');
     } finally {
       setLoading(false);
     }
@@ -72,8 +90,42 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
     // 为全局设置刷新函数
     window.refreshUserList = loadUsers;
     
+    // 监听来自子窗口的消息
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'USER_DATA_UPDATED') {
+        console.log('📨 收到数据更新通知，刷新用户列表');
+        loadUsers();
+      }
+    };
+    
+    // 监听自定义事件
+    const handleUserDataUpdated = () => {
+      console.log('🔄 用户数据已更新，刷新列表');
+      loadUsers();
+    };
+    
+    // 监听窗口获得焦点事件（从其他窗口切换回来时刷新）
+    const handleFocus = () => {
+      console.log('🔍 窗口获得焦点，刷新用户列表');
+      loadUsers();
+    };
+    
+    window.addEventListener('message', handleMessage);
+    window.addEventListener('userDataUpdated', handleUserDataUpdated as EventListener);
+    window.addEventListener('focus', handleFocus);
+    
+    // 可选：定时刷新（每30秒）
+    const refreshInterval = setInterval(() => {
+      console.log('⏰ 定时刷新用户列表');
+      loadUsers();
+    }, 30000);
+    
     // 清理函数
     return () => {
+      window.removeEventListener('message', handleMessage);
+      window.removeEventListener('userDataUpdated', handleUserDataUpdated as EventListener);
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(refreshInterval);
       if (window.refreshUserList === loadUsers) {
         delete window.refreshUserList;
       }
@@ -92,6 +144,13 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
 
   // 打开新窗口添加用户
   const handleAdd = () => {
+    // 确保token存在
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      alert('认证已过期，请重新登录');
+      return;
+    }
+    
     const width = 1200;
     const height = 800;
     const left = Math.floor((screen.width - width) / 2);
@@ -103,6 +162,27 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
       `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no`
     );
     
+    // 传递token到新窗口
+    if (newWindow) {
+      newWindow.addEventListener('load', () => {
+        try {
+          newWindow.localStorage.setItem('auth_token', token);
+          console.log('✅ Token已传递到添加用户窗口');
+        } catch (e) {
+          console.error('❌ 无法传递token到新窗口:', e);
+        }
+      });
+      
+      // 监听窗口关闭事件
+      const checkWindowClosed = setInterval(() => {
+        if (newWindow.closed) {
+          clearInterval(checkWindowClosed);
+          console.log('🔄 添加用户窗口已关闭，刷新列表');
+          loadUsers();
+        }
+      }, 500);
+    }
+    
     if (!newWindow) {
       const useInline = window.confirm('无法打开新窗口，可能被浏览器阻止了。\n\n点击"确定"使用内联表单添加用户，\n点击"取消"查看解决方案。');
       if (useInline) {
@@ -112,6 +192,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
           password: '',
           name: '',
           full_name: '',
+          role: 'user',
           employee_id: generateEmployeeId(),
           department: '白市驿车站',
           team: teams[0],
@@ -128,8 +209,63 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
     }
   };
 
+  // 删除用户
+  const handleDelete = async (user: User) => {
+    if (!window.confirm(`确定要删除用户 ${user.name || user.username} 吗？`)) {
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      const response = await userAPI.delete(user.id.toString());
+      if (response.success) {
+        await loadUsers();
+        alert('用户删除成功！');
+      } else {
+        alert('删除失败: ' + response.error);
+      }
+    } catch (error: any) {
+      alert('删除失败: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 重置密码
+  const handleResetPassword = async (user: User) => {
+    const newPassword = prompt(`重置用户 ${user.name || user.username} 的密码为：`, '123456');
+    if (!newPassword) return;
+    
+    try {
+      setLoading(true);
+      const response = await userAPI.update(user.id.toString(), {
+        password: newPassword,
+        name: user.name || '',
+        full_name: user.full_name || user.name || '',
+        employee_id: user.employee_id || '',
+        company: user.company || '兴隆村车站'
+      });
+      if (response.success) {
+        alert(`密码已重置为: ${newPassword}`);
+      } else {
+        alert('密码重置失败: ' + response.error);
+      }
+    } catch (error: any) {
+      alert('密码重置失败: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // 打开编辑用户表单或新窗口
   const handleEdit = (user: User) => {
+    // 确保token存在
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      alert('认证已过期，请重新登录');
+      return;
+    }
+    
     const width = 1200;
     const height = 800;
     const left = Math.floor((screen.width - width) / 2);
@@ -156,6 +292,27 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
       `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no`
     );
     
+    // 传递token到新窗口
+    if (newWindow) {
+      newWindow.addEventListener('load', () => {
+        try {
+          newWindow.localStorage.setItem('auth_token', token);
+          console.log('✅ Token已传递到编辑用户窗口');
+        } catch (e) {
+          console.error('❌ 无法传递token到新窗口:', e);
+        }
+      });
+      
+      // 监听窗口关闭事件
+      const checkWindowClosed = setInterval(() => {
+        if (newWindow.closed) {
+          clearInterval(checkWindowClosed);
+          console.log('🔄 编辑用户窗口已关闭，刷新列表');
+          loadUsers();
+        }
+      }, 500);
+    }
+    
     if (!newWindow) {
       const useInline = window.confirm('无法打开新窗口，可能被浏览器阻止了。\n\n点击"确定"使用内联表单编辑用户，\n点击"取消"查看解决方案。');
       if (useInline) {
@@ -165,6 +322,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
           password: '',
           name: user.name,
           full_name: user.full_name || '',
+          role: user.role || 'user',
           employee_id: user.employee_id || '',
           department: '白市驿车站',
           team: user.team || teams[0],
@@ -197,8 +355,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
           alert('更新失败: ' + response.error);
         }
       } else {
-        // 创建用户 - 添加默认role
-        const userData = { ...formData, role: 'user' };
+        // 创建用户 - 使用表单中的role
+        const userData = { ...formData };
         const response = await userAPI.create(userData);
         if (response.success) {
           await loadUsers();
@@ -234,11 +392,30 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
     <div style={{ ...lightCard, padding: 20, color: '#111827' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#111827' }}>👥 用户账号管理</h3>
-        <button
-          onClick={handleAdd}
-          disabled={loading}
-          style={{
-            padding: '8px 14px',
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            onClick={loadUsers}
+            disabled={loading}
+            style={{
+              padding: '8px 14px',
+              background: loading ? '#9CA3AF' : '#6B7280',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 6,
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              transition: 'all 0.3s ease'
+            }}
+            title="刷新用户列表"
+          >
+            {loading ? '刷新中...' : '🔄 刷新'}
+          </button>
+          <button
+            onClick={handleAdd}
+            disabled={loading}
+            style={{
+              padding: '8px 14px',
             background: '#111827',
             color: '#fff',
             border: '1px solid #111827',
@@ -251,6 +428,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
         >
           ➕ 添加用户
         </button>
+        </div>
       </div>
 
       {/* 用户列表 */}
@@ -268,9 +446,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
           <thead>
             <tr style={{ backgroundColor: '#f8fafc' }}>
               <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px', color: '#111827' }}>工号</th>
+              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px', color: '#111827' }}>用户名</th>
               <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px', color: '#111827' }}>姓名</th>
-              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px', color: '#111827' }}>电话</th>
-              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px', color: '#111827' }}>单位</th>
+              <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px', color: '#111827' }}>角色</th>
               <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px', color: '#111827' }}>部门</th>
               <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px', color: '#111827' }}>班组</th>
               <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '12px', color: '#111827' }}>工种</th>
@@ -298,30 +476,78 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
                       {user.employee_id || '-'}
                     </code>
                   </td>
+                  <td style={{ padding: '8px', fontSize: '12px' }}>
+                    <strong>{user.username}</strong>
+                  </td>
                   <td style={{ padding: '8px', fontSize: '12px', fontWeight: 600 }}>
                     {user.full_name || user.name}
                   </td>
-                  <td style={{ padding: '8px', fontSize: '12px' }}>{user.phone || '-'}</td>
-                  <td style={{ padding: '8px', fontSize: '12px' }}>兴隆村车站</td>
+                  <td style={{ padding: '8px', fontSize: '12px' }}>
+                    <span style={{
+                      padding: '2px 8px',
+                      borderRadius: 4,
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      background: user.role === 'admin' ? '#fef0f0' : user.role === 'maintenance' ? '#fdf6ec' : '#f0f9ff',
+                      color: user.role === 'admin' ? '#f56c6c' : user.role === 'maintenance' ? '#e6a23c' : '#409eff'
+                    }}>
+                      {user.role === 'admin' ? '管理员' : user.role === 'maintenance' ? '维护人员' : '普通用户'}
+                    </span>
+                  </td>
                   <td style={{ padding: '8px', fontSize: '12px' }}>白市驿车站</td>
                   <td style={{ padding: '8px', fontSize: '12px' }}>{user.team || '-'}</td>
                   <td style={{ padding: '8px', fontSize: '12px' }}>{user.job_type || '-'}</td>
                   <td style={{ padding: '8px', textAlign: 'center' }}>
-                    <button
-                      onClick={() => handleEdit(user)}
-                      style={{
-                        padding: '6px 10px',
-                        background: '#111827',
-                        color: '#fff',
-                        border: '1px solid #111827',
-                        borderRadius: 8,
-                        cursor: 'pointer',
-                        fontSize: 12,
-                        fontWeight: 600
-                      }}
-                    >
-                      编辑
-                    </button>
+                    <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                      <button
+                        onClick={() => handleEdit(user)}
+                        style={{
+                          padding: '4px 8px',
+                          background: '#e6a23c',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: 4,
+                          cursor: 'pointer',
+                          fontSize: 11,
+                          fontWeight: 600
+                        }}
+                        title="编辑用户"
+                      >
+                        编辑
+                      </button>
+                      <button
+                        onClick={() => handleResetPassword(user)}
+                        style={{
+                          padding: '4px 8px',
+                          background: '#67c23a',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: 4,
+                          cursor: 'pointer',
+                          fontSize: 11,
+                          fontWeight: 600
+                        }}
+                        title="重置密码"
+                      >
+                        重置密码
+                      </button>
+                      <button
+                        onClick={() => handleDelete(user)}
+                        style={{
+                          padding: '4px 8px',
+                          background: '#f56c6c',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: 4,
+                          cursor: 'pointer',
+                          fontSize: 11,
+                          fontWeight: 600
+                        }}
+                        title="删除用户"
+                      >
+                        删除
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -487,6 +713,27 @@ const UserManagement: React.FC<UserManagementProps> = ({ currentUser: _currentUs
                   }}
                   placeholder="姓名"
                 />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: 5, fontSize: 12, color: '#111827', fontWeight: 600 }}>角色权限</label>
+                <select
+                  value={formData.role}
+                  onChange={e => setFormData({...formData, role: e.target.value as 'admin' | 'maintenance' | 'user'})}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    borderRadius: 10,
+                    border: '1px solid #e5e7eb',
+                    background: '#fff',
+                    color: '#111827',
+                    fontSize: 14
+                  }}
+                >
+                  <option value="user">普通用户</option>
+                  <option value="maintenance">维护人员</option>
+                  <option value="admin">管理员</option>
+                </select>
               </div>
 
               <div>

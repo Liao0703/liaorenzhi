@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统监控面板 - 铁路学习平台</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header .status {
+            color: #a8c8f7;
+            font-size: 14px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .card h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .metric:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .metric-value {
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .status-healthy { color: #28a745; }
+        .status-warning { color: #ffc107; }
+        .status-error { color: #dc3545; }
+        .status-critical { color: #6f42c1; }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745 0%, #ffc107 70%, #dc3545 90%);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .alerts {
+            grid-column: 1 / -1;
+        }
+
+        .alert-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin: 10px 0;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid;
+        }
+
+        .alert-info { border-left-color: #17a2b8; }
+        .alert-warning { border-left-color: #ffc107; }
+        .alert-error { border-left-color: #dc3545; }
+        .alert-critical { border-left-color: #6f42c1; }
+
+        .alert-time {
+            color: #6c757d;
+            font-size: 12px;
+            margin-left: auto;
+            padding-left: 15px;
+        }
+
+        .refresh-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .refresh-btn:hover {
+            background: #0056b3;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+        }
+
+        .auto-refresh {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .auto-refresh input {
+            margin-right: 5px;
+        }
+
+        .component-status {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .component {
+            text-align: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border: 2px solid transparent;
+        }
+
+        .component.healthy { border-color: #28a745; }
+        .component.degraded { border-color: #ffc107; }
+        .component.error { border-color: #dc3545; }
+
+        .component-name {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .component-status-text {
+            font-weight: bold;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="header">
+            <h1>🛡️ 系统监控面板</h1>
+            <div class="status">
+                <span id="lastUpdate">加载中...</span>
+                <button class="refresh-btn" onclick="refreshData()" id="refreshBtn">刷新数据</button>
+            </div>
+            <div class="auto-refresh">
+                <input type="checkbox" id="autoRefresh" checked>
+                <label for="autoRefresh">自动刷新 (30秒)</label>
+            </div>
+        </div>
+
+        <div id="error-message" class="error" style="display: none;"></div>
+        <div id="loading" class="loading">正在加载监控数据...</div>
+        
+        <div id="dashboard-content" style="display: none;">
+            <!-- 系统状态概览 -->
+            <div class="grid">
+                <div class="card">
+                    <h3>🖥️ 系统概览</h3>
+                    <div class="metric">
+                        <span class="metric-label">整体状态</span>
+                        <span class="metric-value" id="overall-status">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">运行时间</span>
+                        <span class="metric-value" id="uptime">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">活跃告警</span>
+                        <span class="metric-value" id="active-alerts">-</span>
+                    </div>
+                    <div class="component-status" id="component-status">
+                        <!-- 组件状态将在这里动态加载 -->
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>⚡ 性能指标</h3>
+                    <div class="metric">
+                        <span class="metric-label">CPU使用率</span>
+                        <div>
+                            <span class="metric-value" id="cpu-usage">-</span>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="cpu-progress"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">内存使用率</span>
+                        <div>
+                            <span class="metric-value" id="memory-usage">-</span>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="memory-progress"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">磁盘使用率</span>
+                        <div>
+                            <span class="metric-value" id="disk-usage">-</span>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="disk-progress"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>📊 应用性能</h3>
+                    <div class="metric">
+                        <span class="metric-label">总请求数</span>
+                        <span class="metric-value" id="total-requests">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">错误数</span>
+                        <span class="metric-value" id="total-errors">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">错误率</span>
+                        <span class="metric-value" id="error-rate">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">平均响应时间</span>
+                        <span class="metric-value" id="avg-response-time">-</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>🗄️ 数据库 & 缓存</h3>
+                    <div class="metric">
+                        <span class="metric-label">数据库状态</span>
+                        <span class="metric-value" id="database-status">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">查询时间</span>
+                        <span class="metric-value" id="database-query-time">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">缓存类型</span>
+                        <span class="metric-value" id="cache-type">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">缓存键数</span>
+                        <span class="metric-value" id="cache-keys">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 告警信息 -->
+            <div class="grid">
+                <div class="card alerts">
+                    <h3>🚨 最近告警</h3>
+                    <div id="alerts-container">
+                        <div class="loading">加载告警数据...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let autoRefreshInterval;
+        let isRefreshing = false;
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshData();
+            setupAutoRefresh();
+        });
+
+        // 设置自动刷新
+        function setupAutoRefresh() {
+            const autoRefreshCheckbox = document.getElementById('autoRefresh');
+            
+            function updateAutoRefresh() {
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                }
+                
+                if (autoRefreshCheckbox.checked) {
+                    autoRefreshInterval = setInterval(refreshData, 30000); // 30秒
+                }
+            }
+            
+            autoRefreshCheckbox.addEventListener('change', updateAutoRefresh);
+            updateAutoRefresh(); // 初始设置
+        }
+
+        // 刷新数据
+        async function refreshData() {
+            if (isRefreshing) return;
+            
+            isRefreshing = true;
+            const refreshBtn = document.getElementById('refreshBtn');
+            const originalText = refreshBtn.textContent;
+            refreshBtn.textContent = '刷新中...';
+            refreshBtn.disabled = true;
+
+            try {
+                // 并行获取所有监控数据
+                const [summaryRes, alertsRes, statusRes] = await Promise.all([
+                    fetch('/api/monitoring/summary'),
+                    fetch('/api/monitoring/alerts?limit=10'),
+                    fetch('/api/monitoring/status')
+                ]);
+
+                const [summaryData, alertsData, statusData] = await Promise.all([
+                    summaryRes.json(),
+                    alertsRes.json(),
+                    statusRes.json()
+                ]);
+
+                // 更新界面
+                updateSystemOverview(summaryData.data, statusData.data);
+                updatePerformanceMetrics(summaryData.data);
+                updateApplicationMetrics(summaryData.data);
+                updateDatabaseCache(summaryData.data);
+                updateAlerts(alertsData.data.alerts);
+
+                // 隐藏加载和错误信息
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error-message').style.display = 'none';
+                document.getElementById('dashboard-content').style.display = 'block';
+
+                // 更新最后更新时间
+                document.getElementById('lastUpdate').textContent = 
+                    `最后更新: ${new Date().toLocaleString('zh-CN')}`;
+
+            } catch (error) {
+                console.error('数据刷新失败:', error);
+                showError(`数据加载失败: ${error.message}`);
+            } finally {
+                refreshBtn.textContent = originalText;
+                refreshBtn.disabled = false;
+                isRefreshing = false;
+            }
+        }
+
+        // 更新系统概览
+        function updateSystemOverview(summary, status) {
+            document.getElementById('overall-status').textContent = getStatusText(summary.status);
+            document.getElementById('overall-status').className = `metric-value status-${summary.status}`;
+            
+            document.getElementById('uptime').textContent = summary.uptime;
+            document.getElementById('active-alerts').textContent = summary.alerts;
+
+            // 更新组件状态
+            const componentContainer = document.getElementById('component-status');
+            componentContainer.innerHTML = '';
+            
+            if (status.components) {
+                Object.entries(status.components).forEach(([name, componentStatus]) => {
+                    const componentDiv = document.createElement('div');
+                    componentDiv.className = `component ${componentStatus}`;
+                    componentDiv.innerHTML = `
+                        <div class="component-name">${getComponentName(name)}</div>
+                        <div class="component-status-text ${componentStatus}">${getStatusText(componentStatus)}</div>
+                    `;
+                    componentContainer.appendChild(componentDiv);
+                });
+            }
+        }
+
+        // 更新性能指标
+        function updatePerformanceMetrics(data) {
+            // CPU
+            const cpuUsage = parseFloat(data.system?.cpu) || 0;
+            document.getElementById('cpu-usage').textContent = data.system?.cpu || 'N/A';
+            document.getElementById('cpu-progress').style.width = cpuUsage + '%';
+
+            // 内存
+            const memoryUsage = parseFloat(data.system?.memory) || 0;
+            document.getElementById('memory-usage').textContent = data.system?.memory || 'N/A';
+            document.getElementById('memory-progress').style.width = memoryUsage + '%';
+
+            // 磁盘
+            const diskUsage = parseFloat(data.system?.disk) || 0;
+            document.getElementById('disk-usage').textContent = data.system?.disk || 'N/A';
+            document.getElementById('disk-progress').style.width = diskUsage + '%';
+        }
+
+        // 更新应用指标
+        function updateApplicationMetrics(data) {
+            document.getElementById('total-requests').textContent = data.requests || 0;
+            document.getElementById('total-errors').textContent = data.errors || 0;
+            document.getElementById('error-rate').textContent = data.errorRate || '0%';
+            document.getElementById('avg-response-time').textContent = data.avgResponseTime || 'N/A';
+        }
+
+        // 更新数据库和缓存
+        function updateDatabaseCache(data) {
+            const dbStatus = data.database?.status || 'unknown';
+            document.getElementById('database-status').textContent = getStatusText(dbStatus);
+            document.getElementById('database-status').className = `metric-value status-${dbStatus}`;
+            
+            document.getElementById('database-query-time').textContent = data.database?.queryTime || 'N/A';
+            document.getElementById('cache-type').textContent = data.cache?.type || 'unknown';
+            document.getElementById('cache-keys').textContent = data.cache?.keys || 0;
+        }
+
+        // 更新告警
+        function updateAlerts(alerts) {
+            const container = document.getElementById('alerts-container');
+            
+            if (!alerts || alerts.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: #28a745; padding: 20px;">🎉 暂无告警</div>';
+                return;
+            }
+
+            container.innerHTML = alerts.map(alert => `
+                <div class="alert-item alert-${alert.severity}">
+                    <div>
+                        <strong>${alert.ruleName}</strong><br>
+                        <span style="color: #666;">${alert.message}</span>
+                    </div>
+                    <div class="alert-time">
+                        ${new Date(alert.timestamp).toLocaleString('zh-CN')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 显示错误
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        // 获取状态文本
+        function getStatusText(status) {
+            const statusMap = {
+                healthy: '正常',
+                warning: '警告',
+                error: '错误',
+                critical: '严重',
+                degraded: '降级',
+                unknown: '未知',
+                stopped: '已停止'
+            };
+            return statusMap[status] || status;
+        }
+
+        // 获取组件名称
+        function getComponentName(component) {
+            const nameMap = {
+                api: 'API',
+                database: '数据库',
+                cache: '缓存',
+                monitoring: '监控'
+            };
+            return nameMap[component] || component;
+        }
+    </script>
+</body>
+</html>

@@ -1,6 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import HexagonChart from './components/HexagonChart';
+import { userStatisticsService } from './services/userStatisticsService';
+import type { UserStats } from './services/userStatisticsService';
 
 
 interface DashboardProps {
@@ -10,22 +12,51 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const navigate = useNavigate();
-
-  // 模拟学习统计数据
-  const stats = {
-    totalArticles: 15,
-    completedArticles: 8,
-    totalStudyTime: 240, // 分钟
-    averageScore: 85,
-    currentStreak: 5,
-    // 各学习领域成绩
+  const [isMobile, setIsMobile] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<UserStats>({
+    totalArticles: 0,
+    completedArticles: 0,
+    totalStudyTime: 0,
+    averageScore: 0,
+    currentStreak: 0,
     domainScores: {
-      safety: 88,      // 安全规程
-      maintenance: 82, // 设备维护
-      emergency: 75,   // 应急处理
-      signal: 91,      // 信号系统
-      dispatch: 79,    // 调度规范
-      operation: 85    // 作业标准
+      safety: 0,
+      maintenance: 0,
+      emergency: 0,
+      signal: 0,
+      dispatch: 0,
+      operation: 0
+    },
+    recentLearning: []
+  });
+
+  // 检测屏幕尺寸
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
+
+  // 获取用户统计数据
+  useEffect(() => {
+    loadUserStats();
+  }, []);
+
+  const loadUserStats = async () => {
+    setLoading(true);
+    try {
+      const data = await userStatisticsService.getUserStats();
+      setStats(data);
+    } catch (error) {
+      console.error('加载用户统计失败:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -50,7 +81,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     <div style={{ 
       position: 'relative', 
       zIndex: 10, 
-      padding: '20px',
+      padding: isMobile ? '15px' : '20px',
       color: '#fff',
       minHeight: '100vh',
       maxWidth: '100vw',
@@ -60,15 +91,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       <div style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: '15px',
-        marginBottom: '30px',
-        padding: '20px',
+        gap: isMobile ? '12px' : '15px',
+        marginBottom: isMobile ? '20px' : '30px',
+        padding: isMobile ? '16px' : '20px',
         background: 'rgba(0,0,0,0.3)',
         borderRadius: '12px',
         backdropFilter: 'blur(10px)'
       }}>
         <div style={{ textAlign: 'center' }}>
-          <h2 style={{ margin: 0, fontSize: '24px' }}>欢迎，{user?.name}</h2>
+          <h2 style={{ margin: 0, fontSize: isMobile ? '20px' : '24px' }}>欢迎，{user?.name}</h2>
                           <p style={{ margin: '5px 0 0 0', opacity: 0.8 }}>角色：{
                   user?.role === 'admin' ? '系统管理员' : 
                   user?.role === 'maintenance' ? '维护人员' : 
@@ -77,22 +108,24 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         </div>
         <div style={{ 
           display: 'flex', 
-          gap: '10px', 
+          gap: isMobile ? '8px' : '10px', 
           flexWrap: 'wrap',
-          justifyContent: 'center'
+          justifyContent: 'center',
+          flexDirection: isMobile ? 'column' : 'row'
         }}>
           {user?.role === 'user' && (
             <button
               onClick={() => navigate('/articles')}
               style={{
-                padding: '10px 20px',
+                padding: isMobile ? '12px 16px' : '10px 20px',
                 background: 'linear-gradient(90deg,#409eff 60%,#2b8cff 100%)',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '8px',
                 cursor: 'pointer',
-                fontSize: '14px',
-                minWidth: '120px'
+                fontSize: isMobile ? '16px' : '14px',
+                minWidth: isMobile ? 'auto' : '120px',
+                width: isMobile ? '100%' : 'auto'
               }}
             >
               学习中心
@@ -103,14 +136,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             <button
               onClick={() => navigate('/admin')}
               style={{
-                padding: '10px 20px',
+                padding: isMobile ? '12px 16px' : '10px 20px',
                 background: 'linear-gradient(90deg,#67c23a 60%,#5daf34 100%)',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '8px',
                 cursor: 'pointer',
-                fontSize: '14px',
-                minWidth: '120px'
+                fontSize: isMobile ? '16px' : '14px',
+                minWidth: isMobile ? 'auto' : '120px',
+                width: isMobile ? '100%' : 'auto'
               }}
             >
               管理后台 (admin)
@@ -122,14 +156,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             <button
               onClick={() => navigate('/maintenance-admin')}
               style={{
-                padding: '10px 20px',
+                padding: isMobile ? '12px 16px' : '10px 20px',
                 background: 'linear-gradient(90deg,#e6a23c 60%,#cf9236 100%)',
                 color: '#fff',
                 border: 'none',
                 borderRadius: '8px',
                 cursor: 'pointer',
-                fontSize: '14px',
-                minWidth: '120px'
+                fontSize: isMobile ? '16px' : '14px',
+                minWidth: isMobile ? 'auto' : '120px',
+                width: isMobile ? '100%' : 'auto'
               }}
             >
               后台维护 (maintenance)
@@ -138,14 +173,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           <button
             onClick={handleLogout}
             style={{
-              padding: '10px 20px',
+              padding: isMobile ? '12px 16px' : '10px 20px',
               background: 'rgba(255,255,255,0.2)',
               color: '#fff',
               border: 'none',
               borderRadius: '8px',
               cursor: 'pointer',
-              fontSize: '14px',
-              minWidth: '120px'
+              fontSize: isMobile ? '16px' : '14px',
+              minWidth: isMobile ? 'auto' : '120px',
+              width: isMobile ? '100%' : 'auto'
             }}
           >
             退出登录
@@ -156,13 +192,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       {/* 统计卡片 */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-        gap: '20px',
-        marginBottom: '30px'
+        gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(250px, 1fr))',
+        gap: isMobile ? '15px' : '20px',
+        marginBottom: isMobile ? '20px' : '30px'
       }}>
         <div style={{
           background: 'rgba(64, 158, 255, 0.2)',
-          padding: '20px',
+          padding: isMobile ? '16px' : '20px',
           borderRadius: '12px',
           border: '1px solid rgba(64, 158, 255, 0.3)',
           backdropFilter: 'blur(10px)'
@@ -178,7 +214,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
         <div style={{
           background: 'rgba(103, 194, 58, 0.2)',
-          padding: '20px',
+          padding: isMobile ? '16px' : '20px',
           borderRadius: '12px',
           border: '1px solid rgba(103, 194, 58, 0.3)',
           backdropFilter: 'blur(10px)'
@@ -194,7 +230,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
         <div style={{
           background: 'rgba(230, 162, 60, 0.2)',
-          padding: '20px',
+          padding: isMobile ? '16px' : '20px',
           borderRadius: '12px',
           border: '1px solid rgba(230, 162, 60, 0.3)',
           backdropFilter: 'blur(10px)'
@@ -211,7 +247,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
       {/* 六边形学习领域成绩图 */}
       {user?.role === 'user' && (
-        <div style={{ marginBottom: '30px' }}>
+        <div style={{ marginBottom: isMobile ? '20px' : '30px' }}>
           <HexagonChart scores={stats.domainScores} />
         </div>
       )}
@@ -219,45 +255,47 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       {/* 最近学习记录 */}
       <div style={{
         background: 'rgba(0,0,0,0.3)',
-        padding: '20px',
+        padding: isMobile ? '16px' : '20px',
         borderRadius: '12px',
         backdropFilter: 'blur(10px)'
       }}>
-        <h3 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>最近学习记录</h3>
+        <h3 style={{ margin: '0 0 20px 0', fontSize: isMobile ? '16px' : '18px' }}>最近学习记录</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '5px',
-            padding: '10px',
-            background: 'rgba(255,255,255,0.1)',
-            borderRadius: '8px'
-          }}>
-            <span style={{ fontWeight: 'bold' }}>《铁路安全操作规程》</span>
-            <span style={{ opacity: 0.8, fontSize: '14px' }}>2024-01-15 14:30</span>
-          </div>
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '5px',
-            padding: '10px',
-            background: 'rgba(255,255,255,0.1)',
-            borderRadius: '8px'
-          }}>
-            <span style={{ fontWeight: 'bold' }}>《设备维护保养指南》</span>
-            <span style={{ opacity: 0.8, fontSize: '14px' }}>2024-01-14 09:15</span>
-          </div>
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '5px',
-            padding: '10px',
-            background: 'rgba(255,255,255,0.1)',
-            borderRadius: '8px'
-          }}>
-            <span style={{ fontWeight: 'bold' }}>《应急处理流程》</span>
-            <span style={{ opacity: 0.8, fontSize: '14px' }}>2024-01-13 16:45</span>
-          </div>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '20px', color: '#fff' }}>
+              加载中...
+            </div>
+          ) : stats.recentLearning && stats.recentLearning.length > 0 ? (
+            stats.recentLearning.map((item, index) => (
+              <div key={index} style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '5px',
+                padding: '10px',
+                background: 'rgba(255,255,255,0.1)',
+                borderRadius: '8px'
+              }}>
+                <span style={{ fontWeight: 'bold' }}>《{item.articleTitle}》</span>
+                <span style={{ opacity: 0.8, fontSize: '14px' }}>
+                  {new Date(item.completedAt).toLocaleString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </span>
+              </div>
+            ))
+          ) : (
+            <div style={{
+              textAlign: 'center',
+              padding: '20px',
+              color: 'rgba(255,255,255,0.6)'
+            }}>
+              暂无学习记录
+            </div>
+          )}
         </div>
       </div>
 

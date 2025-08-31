@@ -1,0 +1,20 @@
+# 快速修复500错误的命令
+# 复制以下命令，通过SSH连接到服务器后执行
+
+# 1. 连接到服务器
+ssh root@47.109.142.72
+
+# 2. 执行以下命令（一次性复制粘贴）：
+
+cd /www/wwwroot/learning-platform && \
+pm2 stop all && \
+pm2 delete all && \
+lsof -ti:3002 | xargs kill -9 2>/dev/null || true && \
+sleep 2 && \
+NODE_ENV=production pm2 start server.cjs --name "learning-platform" --instances 1 && \
+pm2 save && \
+systemctl reload nginx && \
+echo "✅ 修复完成！" && \
+pm2 status
+
+

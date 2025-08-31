@@ -1,0 +1,72 @@
+#!/bin/bash
+# 服务器上执行的命令
+
+# 1. 查看配置文件中的location规则
+echo "=== 检查重复的location规则 ==="
+cat /www/server/panel/vhost/nginx/node_learning_platform.conf | grep -n "location /"
+
+# 2. 查看完整配置文件
+echo ""
+echo "=== 查看完整配置 ==="
+cat /www/server/panel/vhost/nginx/node_learning_platform.conf
+
+# 3. 测试nginx配置
+echo ""
+echo "=== 测试Nginx配置 ==="
+nginx -t
+
+# 4. 备份当前配置
+echo ""
+echo "=== 备份当前配置 ==="
+cp /www/server/panel/vhost/nginx/node_learning_platform.conf /www/server/panel/vhost/nginx/node_learning_platform.conf.bak
+
+# 5. 创建修复后的配置
+echo ""
+echo "=== 创建修复配置 ==="
+cat > /tmp/fixed_nginx.conf << 'EOF'
+server {
+    listen 80;
+    server_name 47.109.142.72;
+    index index.html index.htm;
+    root /www/wwwroot/node_learning_platform/dist;
+    
+    # 日志
+    error_log /www/wwwlogs/node_learning_platform.error.log;
+    access_log /www/wwwlogs/node_learning_platform.log;
+    
+    # API代理
+    location ^~ /api/ {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+    
+    # 健康检查
+    location = /health {
+        proxy_pass http://127.0.0.1:3001/health;
+    }
+    
+    # 静态资源
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+        expires 30d;
+    }
+    
+    # 前端路由 - 只有一个location /
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+    
+    # 防止访问隐藏文件
+    location ~ /\. {
+        deny all;
+    }
+}
+EOF
+
+echo "修复配置已创建在 /tmp/fixed_nginx.conf"
+
+
+
+

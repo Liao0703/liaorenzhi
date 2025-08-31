@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UI 优化对比展示</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      background: #f8fafc;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      color: #111827;
+      font-size: 32px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    
+    .subtitle {
+      color: #6B7280;
+      text-align: center;
+      margin-bottom: 40px;
+      font-size: 16px;
+    }
+    
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin-bottom: 50px;
+    }
+    
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px;
+      border: 1px solid #eef0f4;
+      box-shadow: 0 6px 24px rgba(17,24,39,0.06);
+    }
+    
+    .card-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .badge {
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    
+    .badge-old {
+      background: #FEE2E2;
+      color: #DC2626;
+    }
+    
+    .badge-new {
+      background: #D1FAE5;
+      color: #059669;
+    }
+    
+    .feature-list {
+      list-style: none;
+      padding: 0;
+      margin: 20px 0;
+    }
+    
+    .feature-list li {
+      padding: 12px;
+      margin-bottom: 10px;
+      background: #F9FAFB;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      color: #374151;
+    }
+    
+    .iframe-container {
+      width: 100%;
+      height: 600px;
+      border: 1px solid #E5E7EB;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-top: 20px;
+    }
+    
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    
+    .improvements {
+      background: #EFF6FF;
+      border: 1px solid #BFDBFE;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 30px 0;
+    }
+    
+    .improvements h3 {
+      color: #1E40AF;
+      margin-top: 0;
+      margin-bottom: 15px;
+      font-size: 18px;
+    }
+    
+    .improvements ul {
+      margin: 0;
+      padding-left: 20px;
+      color: #3730A3;
+    }
+    
+    .improvements li {
+      margin-bottom: 8px;
+      line-height: 1.6;
+    }
+    
+    .button-demo {
+      display: flex;
+      gap: 15px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    
+    .btn-primary {
+      padding: 12px 32px;
+      background: #2F6BFF;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+      background: #1D4ED8;
+      transform: translateY(-1px);
+      box-shadow: 0 10px 25px rgba(47, 107, 255, 0.3);
+    }
+    
+    .btn-secondary {
+      padding: 12px 24px;
+      background: #fff;
+      color: #374151;
+      border: 1px solid #D1D5DB;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+    
+    .btn-secondary:hover {
+      background: #F9FAFB;
+      border-color: #9CA3AF;
+    }
+    
+    .btn-danger {
+      padding: 10px 20px;
+      background: #EF4444;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+    
+    .btn-danger:hover {
+      background: #DC2626;
+    }
+    
+    .color-palette {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+    
+    .color-item {
+      text-align: center;
+    }
+    
+    .color-box {
+      height: 80px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      font-size: 14px;
+      border: 1px solid rgba(0,0,0,0.1);
+    }
+    
+    .color-name {
+      font-size: 12px;
+      color: #6B7280;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎨 账号管理界面 UI 优化展示</h1>
+    <p class="subtitle">将紫色渐变风格统一调整为现代化白色卡片设计</p>
+    
+    <div class="improvements">
+      <h3>✨ 主要优化内容</h3>
+      <ul>
+        <li><strong>配色方案：</strong>从紫色渐变背景改为浅灰色背景 (#f8fafc)，卡片使用纯白色 (#fff)</li>
+        <li><strong>文字颜色：</strong>统一使用深灰色文字 (#111827)，次要文字使用 (#6B7280)</li>
+        <li><strong>边框样式：</strong>使用浅灰色边框 (#eef0f4)，统一圆角设计 (10-16px)</li>
+        <li><strong>按钮设计：</strong>主按钮使用蓝色 (#2F6BFF)，次要按钮白底灰边，危险按钮红色 (#EF4444)</li>
+        <li><strong>阴影效果：</strong>使用轻柔阴影 (0 6px 24px rgba(17,24,39,0.06))</li>
+        <li><strong>输入框样式：</strong>白色背景，浅灰色边框，只读字段使用灰色背景 (#F3F4F6)</li>
+        <li><strong>整体风格：</strong>与系统管理员主界面保持一致的现代化设计语言</li>
+      </ul>
+    </div>
+    
+    <div class="comparison-grid">
+      <div class="card">
+        <div class="card-title">
+          <span>优化前设计</span>
+          <span class="badge badge-old">旧版</span>
+        </div>
+        <div class="feature-list">
+          <li>🎨 紫色渐变背景 (#667eea → #764ba2)</li>
+          <li>📝 白色文字，半透明输入框</li>
+          <li>🔲 毛玻璃效果 (backdrop-filter)</li>
+          <li>🎯 圆形按钮 (borderRadius: 30px)</li>
+          <li>💫 深色阴影效果</li>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-title">
+          <span>优化后设计</span>
+          <span class="badge badge-new">新版</span>
+        </div>
+        <div class="feature-list">
+          <li>🎨 浅灰色背景 (#f8fafc)</li>
+          <li>📝 深色文字，白色输入框</li>
+          <li>🔲 清爽卡片设计，轻柔阴影</li>
+          <li>🎯 标准圆角按钮 (borderRadius: 10px)</li>
+          <li>💫 与主系统一致的设计语言</li>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-title">🎨 新版配色方案</div>
+      <div class="color-palette">
+        <div class="color-item">
+          <div class="color-box" style="background: #f8fafc; color: #374151;">背景色</div>
+          <div class="color-name">#f8fafc</div>
+        </div>
+        <div class="color-item">
+          <div class="color-box" style="background: #fff; color: #374151; border: 1px solid #eef0f4;">卡片背景</div>
+          <div class="color-name">#ffffff</div>
+        </div>
+        <div class="color-item">
+          <div class="color-box" style="background: #111827;">主文字</div>
+          <div class="color-name">#111827</div>
+        </div>
+        <div class="color-item">
+          <div class="color-box" style="background: #6B7280;">次要文字</div>
+          <div class="color-name">#6B7280</div>
+        </div>
+        <div class="color-item">
+          <div class="color-box" style="background: #2F6BFF;">主色调</div>
+          <div class="color-name">#2F6BFF</div>
+        </div>
+        <div class="color-item">
+          <div class="color-box" style="background: #EF4444;">危险色</div>
+          <div class="color-name">#EF4444</div>
+        </div>
+        <div class="color-item">
+          <div class="color-box" style="background: #E5E7EB; color: #374151;">边框色</div>
+          <div class="color-name">#E5E7EB</div>
+        </div>
+        <div class="color-item">
+          <div class="color-box" style="background: #F3F4F6; color: #374151;">禁用背景</div>
+          <div class="color-name">#F3F4F6</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-title">🔘 按钮样式展示</div>
+      <div class="button-demo">
+        <button class="btn-primary">✅ 主要操作</button>
+        <button class="btn-secondary">🔄 次要操作</button>
+        <button class="btn-danger">✕ 危险操作</button>
+        <button class="btn-primary" disabled style="background: #9CA3AF; cursor: not-allowed;">⏳ 禁用状态</button>
+      </div>
+    </div>
+    
+    <div class="comparison-grid">
+      <div class="card">
+        <div class="card-title">添加用户窗口</div>
+        <div class="iframe-container">
+          <iframe src="add-user-window.html"></iframe>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-title">编辑用户窗口</div>
+        <div class="iframe-container">
+          <iframe src="edit-user-window.html?id=1&username=test&name=测试用户"></iframe>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card" style="background: #F0FDF4; border-color: #BBF7D0;">
+      <div class="card-title" style="color: #059669;">
+        ✅ 优化完成
+      </div>
+      <p style="color: #047857; margin: 0; line-height: 1.6;">
+        账号管理的添加和编辑页面已成功优化，现在与系统主界面保持一致的视觉风格。
+        新的设计更加清爽、现代，提供了更好的用户体验和可读性。
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+
+
+
+
+

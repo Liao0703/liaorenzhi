@@ -8,13 +8,15 @@ import Register from './Register';
 import ForgotPassword from './ForgotPassword';
 import Dashboard from './Dashboard';
 import RoleHome from './RoleHome';
+import SettingsPage from './SettingsPage';
 import ArticleList from './ArticleList';
 import ArticleReader from './ArticleReader';
 import AdminPanel from './AdminPanel';
 import MaintenanceAdminPanel from './MaintenanceAdminPanel';
 import MaintenanceAdminTest from './MaintenanceAdminTest';
 import MaintenanceAdminSimple from './MaintenanceAdminSimple';
-import DataSyncStatus from './DataSyncStatus';
+import MaintenanceAdminRealDB from './MaintenanceAdminRealDB';
+
 import CameraTest from './CameraTest';
 import MaintenancePage from './MaintenancePage';
 import { maintenanceService } from './maintenanceService';
@@ -219,6 +221,12 @@ const AppContent = () => {
             }
           />
           <Route
+            path="/settings"
+            element={
+              user ? <SettingsPage user={user} /> : <Navigate to="/" replace />
+            }
+          />
+          <Route
             path="/articles"
             element={
               user ? <ArticleList user={user} /> : <Navigate to="/" replace />
@@ -257,6 +265,10 @@ const AppContent = () => {
             element={<MaintenanceAdminSimple user={user} onLogout={handleLogout} />}
           />
           <Route
+            path="/maintenance-realdb"
+            element={<MaintenanceAdminRealDB user={user} onLogout={handleLogout} />}
+          />
+          <Route
             path="/camera-test"
             element={
               user ? <CameraTest /> : <Navigate to="/" replace />
@@ -270,8 +282,7 @@ const AppContent = () => {
           />
         </Routes>
 
-        {/* 恢复登录页也显示同步状态条 */}
-        <DataSyncStatus />
+
 
         {/* 版权信息栏 */}
         {/* 恢复登录页也显示页脚 */}
@@ -284,9 +295,9 @@ const AppContent = () => {
             background: 'rgba(34, 34, 34, 0.85)',
             color: '#fff',
             textAlign: 'center',
-            fontSize: 14,
-            letterSpacing: 1,
-            padding: '12px 0 10px 0',
+            fontSize: 11,
+            letterSpacing: 0.5,
+            padding: '6px 0 5px 0',
             zIndex: 100,
             boxShadow: '0 -2px 12px #0003',
             backdropFilter: 'blur(4px)',

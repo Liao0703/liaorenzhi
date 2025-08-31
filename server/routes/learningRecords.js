@@ -185,6 +185,125 @@ router.get('/statistics/overview', async (req, res) => {
   }
 });
 
+// 获取学习排行榜
+router.get('/leaderboard', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 20; // 默认返回前20名
+    
+    const [leaderboard] = await pool.execute(`
+      SELECT 
+        u.id,
+        u.name,
+        u.username,
+        u.team,
+        u.job_type,
+        COUNT(lr.id) as total_completed,
+        AVG(lr.quiz_score) as avg_score,
+        SUM(lr.reading_time) as total_reading_time,
+        MAX(lr.completed_at) as latest_study
+      FROM users u
+      INNER JOIN learning_records lr ON u.id = lr.user_id
+      WHERE lr.status = 'completed' AND lr.quiz_score IS NOT NULL
+      GROUP BY u.id, u.name, u.username, u.team, u.job_type
+      HAVING COUNT(lr.id) > 0
+      ORDER BY avg_score DESC, total_completed DESC, latest_study DESC
+      LIMIT ?
+    `, [limit]);
+    
+    // 格式化数据，添加排名
+    const formattedLeaderboard = leaderboard.map((user, index) => ({
+      rank: index + 1,
+      id: user.id,
+      name: user.name,
+      username: user.username,
+      team: user.team || '未分配',
+      jobType: user.job_type || '未设置',
+      totalCompleted: user.total_completed,
+      avgScore: Math.round(user.avg_score * 10) / 10, // 保留一位小数
+      totalReadingTime: user.total_reading_time,
+      latestStudy: user.latest_study
+    }));
+    
+    res.json({
+      success: true,
+      data: formattedLeaderboard
+    });
+  } catch (error) {
+    console.error('获取学习排行榜失败:', error);
+    res.status(500).json({ error: '服务器内部错误' });
+  }
+});
+
+// 获取用户排名详情
+router.get('/user/:userId/rank', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // 获取用户统计信息
+    const [userStats] = await pool.execute(`
+      SELECT 
+        u.id,
+        u.name,
+        u.username,
+        u.team,
+        u.job_type,
+        COUNT(lr.id) as total_completed,
+        AVG(lr.quiz_score) as avg_score,
+        SUM(lr.reading_time) as total_reading_time,
+        MAX(lr.completed_at) as latest_study
+      FROM users u
+      LEFT JOIN learning_records lr ON u.id = lr.user_id AND lr.status = 'completed'
+      WHERE u.id = ?
+      GROUP BY u.id, u.name, u.username, u.team, u.job_type
+    `, [userId]);
+    
+    if (userStats.length === 0) {
+      return res.status(404).json({ error: '用户不存在' });
+    }
+    
+    const user = userStats[0];
+    let rank = null;
+    
+    // 如果用户有学习记录，计算排名
+    if (user.avg_score !== null) {
+      const [rankResult] = await pool.execute(`
+        SELECT COUNT(*) + 1 as user_rank
+        FROM (
+          SELECT AVG(lr.quiz_score) as avg_score, COUNT(lr.id) as total_completed, MAX(lr.completed_at) as latest_study
+          FROM users u2
+          INNER JOIN learning_records lr ON u2.id = lr.user_id
+          WHERE lr.status = 'completed' AND lr.quiz_score IS NOT NULL
+          GROUP BY u2.id
+          HAVING AVG(lr.quiz_score) > ? 
+                 OR (AVG(lr.quiz_score) = ? AND COUNT(lr.id) > ?)
+                 OR (AVG(lr.quiz_score) = ? AND COUNT(lr.id) = ? AND MAX(lr.completed_at) > ?)
+        ) as better_users
+      `, [user.avg_score, user.avg_score, user.total_completed, user.avg_score, user.total_completed, user.latest_study]);
+      
+      rank = rankResult[0].user_rank;
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        team: user.team || '未分配',
+        jobType: user.job_type || '未设置',
+        rank: rank,
+        totalCompleted: user.total_completed,
+        avgScore: user.avg_score ? Math.round(user.avg_score * 10) / 10 : 0,
+        totalReadingTime: user.total_reading_time || 0,
+        latestStudy: user.latest_study
+      }
+    });
+  } catch (error) {
+    console.error('获取用户排名失败:', error);
+    res.status(500).json({ error: '服务器内部错误' });
+  }
+});
+
 // 删除学习记录
 router.delete('/:id', async (req, res) => {
   try {

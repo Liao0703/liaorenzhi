@@ -1,35 +1,37 @@
-// API配置 - 智能环境检测（支持内网与环境变量覆盖）
+// API配置 - 智能环境检测（支持Node.js和PHP后端）
 const getApiBaseUrl = () => {
-  // 1) 允许通过构建环境变量覆盖（推荐内网部署时设置）
-  //    例如：VITE_API_BASE_URL=/api 或 http://192.168.1.10:3001/api
+  // 1) 允许通过构建环境变量覆盖
+  //    例如：VITE_API_BASE_URL=/api 或 http://192.168.1.10/api
   const envUrl = (import.meta as any)?.env?.VITE_API_BASE_URL
-    || (typeof process !== 'undefined' && (process as any)?.env?.VITE_API_BASE_URL);
+    || (typeof process !== 'undefined' && (process as any)?.env?.VITE_API_BASE_URL)
+    || '/api';
   if (envUrl) {
     return String(envUrl).replace(/\/$/, '');
   }
 
-  const { hostname, protocol } = window.location;
+  const { hostname } = window.location;
 
-  // 2) 云服务器或 Vercel 部署环境
+  // 2) 云服务器或生产环境 - PHP后端
   if (
+    hostname === '47.109.142.72' ||
     hostname === '116.62.65.246' ||
     hostname === 'www.liaorenzhi.top' ||
     hostname === 'liaorenzhi.top' ||
-    hostname.includes('vercel.app')
+    hostname.includes('vercel.app') ||
+    !hostname.includes('localhost')
   ) {
-    // 优先走同源代理（适配 Vercel 重写），可被 VITE_API_BASE_URL 覆盖
+    // 生产环境使用同域API（PHP后端）
     return '/api';
   }
 
-  // 3) 本地开发（浏览器访问 http://localhost:5173 等）
+  // 3) 本地开发环境
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return 'http://localhost:3001/api';
+    // 本地开发优先走同域代理 /api（由 vite proxy 指向后端）
+    return '/api';
   }
 
-  // 4) 默认：内网/实体服务器访问
-  //    情况 A：直接前端从内网地址访问（例：http://192.168.1.20），后端跑在同机 3001 端口
-  //    情况 B：若已通过 Nginx 反向代理到 /api，请在构建时设置 VITE_API_BASE_URL=/api
-  return `${protocol}//${hostname}:3001/api`;
+  // 4) 默认：生产环境PHP后端
+  return '/api';
 };
 
 export const API_BASE_URL = getApiBaseUrl();
@@ -73,9 +75,10 @@ class ApiClient {
       if (!response.ok) {
         const errorText = await response.text();
         console.warn(`API请求失败: ${response.status} ${response.statusText}`, errorText);
+        const friendly = response.status === 401 ? '账号或密码错误' : `HTTP错误: ${response.status} ${response.statusText}`;
         return { 
           success: false, 
-          error: `HTTP错误: ${response.status} ${response.statusText}`,
+          error: friendly,
           statusCode: response.status
         };
       }
@@ -85,8 +88,33 @@ class ApiClient {
       return data;
     } catch (error) {
       console.error('API请求失败:', error);
-      return { 
-        success: false, 
+      // 网络层失败时，尝试备用基址（本地开发常见3000/3001切换或同域 /api 代理）
+      const fallbacks: string[] = [];
+      if (this.baseURL.includes('localhost:3000')) fallbacks.push('http://localhost:3001/api');
+      if (this.baseURL.includes('localhost:3001')) fallbacks.push('http://localhost:3000/api');
+      // 同域反向代理（若已配置）
+      if (!this.baseURL.startsWith('/')) fallbacks.push('/api');
+
+      for (const fb of fallbacks) {
+        try {
+          const fbUrl = `${fb}${endpoint}`;
+          console.warn(`重试备用API地址: ${fbUrl}`);
+          const response = await fetch(fbUrl, config);
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.warn(`备用API请求失败: ${response.status} ${response.statusText}`, errorText);
+            continue;
+          }
+          const data = await response.json();
+          console.log('备用API响应数据:', data);
+          return data;
+        } catch (_) {
+          // 忽略，尝试下一个
+        }
+      }
+
+      return {
+        success: false,
         error: error instanceof Error ? error.message : '网络请求失败',
         isNetworkError: true
       };
@@ -159,6 +187,26 @@ export const userAPI = {
   // 删除用户
   delete: (id: string) =>
     apiClient.delete(`/users/${id}`),
+  
+  // 当前用户更新资料（头像/昵称/邮箱/手机）
+  updateMe: (data: any) =>
+    apiClient.put('/users/me', data),
+
+  // 修改密码
+  changePassword: (oldPassword: string, newPassword: string) =>
+    apiClient.post('/users/me/change-password', { oldPassword, newPassword }),
+
+  // 邮箱两步验证：发送验证码
+  sendEmail2FACode: () =>
+    apiClient.post('/users/me/2fa/email/send', {}),
+
+  // 邮箱两步验证：开启
+  enableEmail2FA: (code: string) =>
+    apiClient.post('/users/me/2fa/email/enable', { code }),
+
+  // 邮箱两步验证：关闭
+  disableEmail2FA: (code: string) =>
+    apiClient.post('/users/me/2fa/email/disable', { code }),
 };
 
 // 学习记录相关API
@@ -191,9 +239,81 @@ export const learningRecordAPI = {
   getStats: () =>
     apiClient.get('/learning-records/stats'),
 
+  // 获取文章学习统计
+  getArticleStats: (articleId: string) =>
+    apiClient.get(`/learning-records/article/${articleId}/stats`),
+
   // 导出学习记录
   export: (filters?: any) =>
     apiClient.post('/learning-records/export', filters),
+
+  // 获取学习排行榜
+  getLeaderboard: (limit?: number) =>
+    apiClient.get(`/learning-records/leaderboard${limit ? `?limit=${limit}` : ''}`),
+
+  // 获取用户排名详情
+  getUserRank: (userId: string) =>
+    apiClient.get(`/learning-records/user/${userId}/rank`),
+
+  // 获取学习统计概览
+  getOverviewStats: () =>
+    apiClient.get('/learning-records/statistics/overview'),
+};
+
+// 文章相关API
+export const articleAPI = {
+  // 获取所有文章
+  getAll: () =>
+    apiClient.get('/articles'),
+
+  // 获取单个文章
+  getById: (id: string) =>
+    apiClient.get(`/articles/${id}`),
+
+  // 创建文章
+  create: (articleData: any) =>
+    apiClient.post('/articles', articleData),
+
+  // 更新文章
+  update: (id: string, articleData: any) =>
+    apiClient.put(`/articles/${id}`, articleData),
+
+  // 删除文章
+  delete: (id: string) =>
+    apiClient.delete(`/articles/${id}`),
+};
+
+// 照片相关API（云数据库）
+export const photoAPI = {
+  // 列表（支持分页与搜索）
+  list: (params?: { page?: number; limit?: number; q?: string; start?: string; end?: string }) => {
+    const sp = new URLSearchParams();
+    if (params?.page) sp.set('page', String(params.page));
+    if (params?.limit) sp.set('limit', String(params.limit));
+    if (params?.q) sp.set('q', params.q);
+    if (params?.start) sp.set('start', params.start);
+    if (params?.end) sp.set('end', params.end);
+    const qs = sp.toString();
+    return apiClient.get(`/photos${qs ? `?${qs}` : ''}`);
+  },
+  // 根据用户/文章筛选
+  listByUser: (userId: number | string) => apiClient.get(`/photos/user/${userId}`),
+  listByArticle: (articleId: number | string) => apiClient.get(`/photos/article/${articleId}`),
+  // 新建
+  create: (data: { user_id: number; article_id: number; photo_data: string; file_name?: string; file_size?: number; }) =>
+    apiClient.post('/photos', data),
+  // 删除
+  delete: (id: number | string) => apiClient.delete(`/photos/${id}`),
+  // 导出CSV
+  exportCsv: (params?: { q?: string; start?: string; end?: string }) => {
+    const sp = new URLSearchParams();
+    if (params?.q) sp.set('q', params.q);
+    if (params?.start) sp.set('start', params.start);
+    if (params?.end) sp.set('end', params.end);
+    const qs = sp.toString();
+    const url = `${API_BASE_URL}/photos/export${qs ? `?${qs}` : ''}`;
+    return fetch(url, { method: 'GET' });
+  }
 };
 
 export default apiClient;

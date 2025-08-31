@@ -78,7 +78,7 @@ export const exportStorageReport = (): string => {
   const storageData = getLearningStorageData();
   const usage = getStorageUsage();
   
-  let report = `# 学习系统存储报告\n`;
+  let report = `# 兴站智训通存储报告\n`;
   report += `生成时间: ${new Date().toLocaleString('zh-CN')}\n\n`;
   
   report += `## 存储使用情况\n`;

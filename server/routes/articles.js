@@ -4,12 +4,24 @@ const { pool } = require('../config/database');
 
 const router = express.Router();
 
-// 获取所有文章
+// 获取所有文章（支持按工种过滤）
 router.get('/', async (req, res) => {
   try {
-    const [articles] = await pool.execute(
-      'SELECT * FROM articles ORDER BY created_at DESC'
-    );
+    const { user_job_type } = req.query;
+    
+    let query = 'SELECT * FROM articles';
+    let params = [];
+    
+    // 如果提供了工种参数，则过滤只显示该工种可以访问的文章
+    if (user_job_type) {
+      query += ' WHERE (allowed_job_types IS NULL OR JSON_CONTAINS(allowed_job_types, ?))';
+      params.push(JSON.stringify(user_job_type));
+    }
+    
+    // 为兼容不同库结构，改为按自增ID排序，避免因缺少 created_at 列导致查询失败
+    query += ' ORDER BY id DESC';
+    
+    const [articles] = await pool.execute(query, params);
     
     res.json({
       success: true,
@@ -54,7 +66,8 @@ router.post('/', [
   body('file_type').optional().isIn(['pdf', 'word', 'none']).withMessage('文件类型无效'),
   body('file_url').optional(),
   body('file_name').optional(),
-  body('storage_type').optional().isIn(['local', 'oss', 'hybrid']).withMessage('存储类型无效')
+  body('storage_type').optional().isIn(['local', 'oss', 'hybrid']).withMessage('存储类型无效'),
+  body('allowed_job_types').optional().isArray().withMessage('工种分配必须是数组格式')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -67,12 +80,19 @@ router.post('/', [
 
     const { 
       title, content, category, required_reading_time = 30,
-      file_type = 'none', file_url, file_name, storage_type = 'local'
+      file_type = 'none', file_url, file_name, storage_type = 'local',
+      allowed_job_types = null
     } = req.body;
     
+    // 处理工种分配数据
+    let jobTypesData = null;
+    if (allowed_job_types && Array.isArray(allowed_job_types) && allowed_job_types.length > 0) {
+      jobTypesData = JSON.stringify(allowed_job_types);
+    }
+    
     const [result] = await pool.execute(
-      'INSERT INTO articles (title, content, category, required_reading_time, file_type, file_url, file_name, storage_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [title, content, category, required_reading_time, file_type, file_url, file_name, storage_type]
+      'INSERT INTO articles (title, content, category, required_reading_time, file_type, file_url, file_name, storage_type, allowed_job_types) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [title, content, category, required_reading_time, file_type, file_url, file_name, storage_type, jobTypesData]
     );
     
     res.status(201).json({
@@ -95,7 +115,8 @@ router.put('/:id', [
   body('file_type').optional().isIn(['pdf', 'word', 'none']).withMessage('文件类型无效'),
   body('file_url').optional(),
   body('file_name').optional(),
-  body('storage_type').optional().isIn(['local', 'oss', 'hybrid']).withMessage('存储类型无效')
+  body('storage_type').optional().isIn(['local', 'oss', 'hybrid']).withMessage('存储类型无效'),
+  body('allowed_job_types').optional().isArray().withMessage('工种分配必须是数组格式')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -109,7 +130,7 @@ router.put('/:id', [
     const { id } = req.params;
     const { 
       title, content, category, required_reading_time,
-      file_type, file_url, file_name, storage_type
+      file_type, file_url, file_name, storage_type, allowed_job_types
     } = req.body;
     
     const updateFields = [];
@@ -146,6 +167,14 @@ router.put('/:id', [
     if (storage_type !== undefined) {
       updateFields.push('storage_type = ?');
       updateValues.push(storage_type);
+    }
+    if (allowed_job_types !== undefined) {
+      updateFields.push('allowed_job_types = ?');
+      let jobTypesData = null;
+      if (allowed_job_types && Array.isArray(allowed_job_types) && allowed_job_types.length > 0) {
+        jobTypesData = JSON.stringify(allowed_job_types);
+      }
+      updateValues.push(jobTypesData);
     }
     
     if (updateFields.length === 0) {

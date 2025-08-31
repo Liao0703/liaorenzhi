@@ -16,19 +16,19 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: #f8fafc;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: white;
+      color: #374151;
       z-index: 9999;
     }
     
     .loading-spinner {
       width: 40px;
       height: 40px;
-      border: 3px solid rgba(255, 255, 255, 0.3);
-      border-top: 3px solid white;
+      border: 3px solid #E5E7EB;
+      border-top: 3px solid #2F6BFF;
       border-radius: 50%;
       animation: spin 1s linear infinite;
       margin-right: 15px;
@@ -58,8 +58,8 @@
 
     // 简化的API客户端
     const API_BASE_URL = window.location.hostname === 'localhost' 
-      ? 'http://localhost:3001/api' 
-      : 'http://116.62.65.246:3001/api';
+      ? 'http://localhost:3002/api' 
+      : '/api';
 
     const apiClient = {
       async request(endpoint, options = {}) {
@@ -183,20 +183,34 @@
           // 通知父窗口刷新用户列表
           if (window.opener && !window.opener.closed) {
             try {
-              // 尝试调用父窗口的刷新函数
+              // 方法1：调用父窗口的刷新函数
               if (window.opener.refreshUserList) {
                 window.opener.refreshUserList();
+                console.log('✅ 已调用父窗口刷新函数');
               }
+              
+              // 方法2：发送消息给父窗口
+              window.opener.postMessage({ 
+                type: 'USER_DATA_UPDATED',
+                action: 'refresh',
+                userId: userId
+              }, '*');
+              console.log('✅ 已发送刷新消息到父窗口');
+              
             } catch (e) {
-              console.log('无法调用父窗口刷新函数:', e);
+              console.error('无法通知父窗口:', e);
             }
           }
 
           setTimeout(() => {
             setMessage({ 
               type: 'success', 
-              text: '用户更新成功！您可以关闭此窗口返回用户管理页面。刷新页面即可看到更新后的数据。' 
+              text: '用户更新成功！窗口将在2秒后自动关闭...' 
             });
+            // 自动关闭窗口
+            setTimeout(() => {
+              window.close();
+            }, 2000);
           }, 1000);
 
         } catch (error) {
@@ -217,12 +231,12 @@
 
       const inputStyle = {
         width: '100%',
-        padding: '15px 18px',
+        padding: '12px 16px',
         borderRadius: '10px',
-        border: '1px solid rgba(255, 255, 255, 0.3)',
-        background: 'rgba(255, 255, 255, 0.15)',
-        color: '#fff',
-        fontSize: '16px',
+        border: '1px solid #E5E7EB',
+        background: '#fff',
+        color: '#111827',
+        fontSize: '15px',
         outline: 'none',
         transition: 'all 0.3s ease',
         boxSizing: 'border-box'
@@ -231,14 +245,14 @@
       const selectStyle = {
         ...inputStyle,
         cursor: 'pointer',
-        background: 'rgba(255, 255, 255, 0.15)'
+        background: '#fff'
       };
 
       const labelStyle = {
         display: 'block',
-        marginBottom: '10px',
+        marginBottom: '8px',
         fontSize: '14px',
-        color: '#fff',
+        color: '#374151',
         fontWeight: '600'
       };
 
@@ -248,26 +262,25 @@
 
       return React.createElement('div', {
         style: {
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          background: '#f8fafc',
           minHeight: '100vh',
           padding: '20px',
-          fontFamily: 'Arial, sans-serif'
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif'
         }
       }, [
         // 顶部标题栏
         React.createElement('div', {
           key: 'header',
           style: {
-            background: 'rgba(255, 255, 255, 0.15)',
-            borderRadius: '12px',
-            padding: '20px 30px',
-            marginBottom: '25px',
-            backdropFilter: 'blur(10px)',
+            background: '#fff',
+            borderRadius: '16px',
+            padding: '24px 32px',
+            marginBottom: '24px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            color: '#fff',
-            border: '1px solid rgba(255, 255, 255, 0.2)'
+            border: '1px solid #eef0f4',
+            boxShadow: '0 6px 24px rgba(17,24,39,0.06)'
           }
         }, [
           React.createElement('div', { key: 'title' }, [
@@ -275,17 +288,17 @@
               key: 'h1',
               style: {
                 margin: 0,
-                fontSize: '26px',
-                fontWeight: 'bold',
-                textShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                letterSpacing: '1px'
+                fontSize: '24px',
+                fontWeight: '700',
+                color: '#111827',
+                letterSpacing: '0.5px'
               }
             }, '✏️ 编辑用户'),
             React.createElement('p', {
               key: 'p',
               style: {
                 margin: '8px 0 0 0',
-                opacity: 0.9,
+                color: '#6B7280',
                 fontSize: '14px'
               }
             }, `编辑用户: ${formData.name || formData.username}`)
@@ -295,12 +308,14 @@
             onClick: handleClose,
             style: {
               padding: '10px 20px',
-              background: 'rgba(255, 71, 87, 0.8)',
+              background: '#EF4444',
               color: '#fff',
               border: 'none',
-              borderRadius: '8px',
+              borderRadius: '10px',
               cursor: 'pointer',
-              fontSize: '14px'
+              fontSize: '14px',
+              fontWeight: '500',
+              transition: 'all 0.3s ease'
             }
           }, '✕ 关闭窗口')
         ]),
@@ -328,13 +343,11 @@
         React.createElement('div', {
           key: 'form',
           style: {
-            background: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(20px)',
-            padding: '40px',
-            borderRadius: '20px',
-            color: '#fff',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)'
+            background: '#fff',
+            padding: '32px',
+            borderRadius: '16px',
+            border: '1px solid #eef0f4',
+            boxShadow: '0 6px 24px rgba(17,24,39,0.06)'
           }
         }, [
           React.createElement('div', {
@@ -356,8 +369,8 @@
                 readOnly: true,
                 style: {
                   ...inputStyle,
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  opacity: 0.7,
+                  background: '#F3F4F6',
+                  color: '#6B7280',
                   cursor: 'not-allowed'
                 },
                 placeholder: '用户名'
@@ -446,7 +459,7 @@
                 React.createElement('option', { 
                   key: team, 
                   value: team,
-                  style: { background: '#2c3e50', color: '#fff' }
+                  style: { background: '#fff', color: '#111827' }
                 }, team)
               ))
             ]),
@@ -463,7 +476,7 @@
                 React.createElement('option', { 
                   key: jobType, 
                   value: jobType,
-                  style: { background: '#2c3e50', color: '#fff' }
+                  style: { background: '#fff', color: '#111827' }
                 }, jobType)
               ))
             ]),
@@ -521,21 +534,22 @@
               justifyContent: 'center',
               flexWrap: 'wrap',
               paddingTop: '20px',
-              borderTop: '1px solid rgba(255, 255, 255, 0.2)'
+              borderTop: '1px solid #E5E7EB'
             }
           }, [
             React.createElement('button', {
               key: 'cancel',
               onClick: handleClose,
               style: {
-                padding: '15px 30px',
-                background: 'rgba(255,255,255,0.15)',
-                color: '#fff',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
-                borderRadius: '30px',
+                padding: '12px 24px',
+                background: '#fff',
+                color: '#374151',
+                border: '1px solid #D1D5DB',
+                borderRadius: '10px',
                 cursor: 'pointer',
-                fontSize: '16px',
-                fontWeight: '500'
+                fontSize: '15px',
+                fontWeight: '500',
+                transition: 'all 0.3s ease'
               }
             }, '❌ 取消'),
 
@@ -544,16 +558,17 @@
               onClick: handleSave,
               disabled: loading || !formData.username,
               style: {
-                padding: '15px 40px',
+                padding: '12px 32px',
                 background: loading || !formData.username
-                  ? 'rgba(255,255,255,0.3)'
-                  : 'linear-gradient(90deg,#409eff 60%,#2b8cff 100%)',
+                  ? '#9CA3AF'
+                  : '#2F6BFF',
                 color: '#fff',
                 border: 'none',
-                borderRadius: '30px',
+                borderRadius: '10px',
                 cursor: loading || !formData.username ? 'not-allowed' : 'pointer',
-                fontSize: '16px',
-                fontWeight: '600'
+                fontSize: '15px',
+                fontWeight: '600',
+                transition: 'all 0.3s ease'
               }
             }, loading ? '⏳ 更新中...' : '✅ 保存修改')
           ])

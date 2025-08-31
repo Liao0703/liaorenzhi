@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authAPI } from './config/api';
-import LeaderBoard from './components/LeaderBoard';
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
@@ -76,7 +75,6 @@ const Register: React.FC = () => {
 
   return (
     <>
-      <LeaderBoard position="login" />
       <form className="login-form-bg" onSubmit={handleSubmit} style={{ maxWidth: '400px', margin: '0 auto' }}>
         <h2 style={{ textAlign: 'center', marginBottom: '30px', color: '#fff' }}>用户注册</h2>
         

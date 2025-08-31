@@ -1,5 +1,21 @@
 const mysql = require('mysql2/promise');
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
+
+// 若未显式配置数据库，自动尝试加载项目根目录的 env.cloud（云数据库配置）
+if (!process.env.DB_HOST || process.env.DB_HOST === 'localhost') {
+  try {
+    const cloudEnvPath = path.resolve(__dirname, '..', '..', 'env.cloud');
+    if (fs.existsSync(cloudEnvPath)) {
+      // 使用 override:true 覆盖之前可能加载的本地 .env（例如 DB_HOST=localhost）
+      require('dotenv').config({ path: cloudEnvPath, override: true });
+      console.log('🔄 已从 env.cloud 加载云数据库配置');
+    }
+  } catch (_) {
+    // 安静降级
+  }
+}
 
 // 数据库配置
 const dbConfig = {
@@ -23,12 +39,22 @@ const pool = mysql.createPool({
   queueLimit: 0
 });
 
+console.log('🛠️ 数据库配置: ', {
+  host: dbConfig.host,
+  port: dbConfig.port,
+  user: dbConfig.user,
+  database: dbConfig.database
+});
+
 // 测试数据库连接
 const testConnection = async () => {
   try {
     const connection = await pool.getConnection();
     console.log('✅ 数据库连接成功');
     connection.release();
+    // 数据库连接成功，确保不使用内存存储
+    global.memoryDB = null;
+    return true;
   } catch (error) {
     console.error('❌ 数据库连接失败:', error.message);
     
@@ -40,34 +66,34 @@ const testConnection = async () => {
       users: [
         {
           id: 1,
-          username: 'maintenance',
+          username: 'admin',
           password: '$2a$10$av/uDQ46.OvGNnaF1cKPyeQyaOFKdfQkj0mfiYcWNt2yq7g68lRI6', // 123456
-          name: '王强',
-          full_name: '王强',
-          role: 'maintenance',
-          email: 'wangqiang@example.com',
+          name: '赵六',
+          full_name: '赵六',
+          role: 'admin',
+          email: 'admin@example.com',
           phone: '13800138001',
           company: '兴隆村车站',
           department: '白市驿车站',
           team: '运转一班',
           job_type: '车站值班员',
-          employee_id: 'MAINT001',
+          employee_id: 'ADMIN001',
           created_at: new Date().toISOString()
         },
         {
           id: 2,
-          username: 'admin',
+          username: 'maintenance',
           password: '$2a$10$av/uDQ46.OvGNnaF1cKPyeQyaOFKdfQkj0mfiYcWNt2yq7g68lRI6', // 123456
-          name: '陈明',
-          full_name: '陈明',
-          role: 'admin',
-          email: 'chenming@example.com',
+          name: '孙七',
+          full_name: '孙七',
+          role: 'maintenance',
+          email: 'maintenance@example.com',
           phone: '13800138002',
           company: '兴隆村车站',
           department: '白市驿车站',
           team: '运转一班',
           job_type: '车站值班员',
-          employee_id: 'ADMIN001',
+          employee_id: 'MAINT001',
           created_at: new Date().toISOString()
         },
         {
@@ -166,7 +192,8 @@ const testConnection = async () => {
           employee_id: '10006',
           created_at: new Date().toISOString()
         }
-      ]
+      ],
+      articles: []
     };
   }
 };
@@ -179,6 +206,7 @@ const memoryQuery = {
     }
     
     console.log('内存数据库查询:', query, params);
+    console.log('当前articles数据:', global.memoryDB.articles);
     
     // 简单的SQL查询解析
     if (query.includes('SELECT * FROM users WHERE username = ?')) {
@@ -282,6 +310,68 @@ const memoryQuery = {
       return [{ affectedRows: userIndex !== -1 ? 1 : 0 }];
     }
     
+    // Articles表操作
+    if (query.includes('SELECT * FROM articles ORDER BY created_at DESC')) {
+      const result = global.memoryDB.articles || [];
+      console.log('SELECT articles 返回:', result);
+      return [result];
+    }
+    
+    if (query.includes('SELECT * FROM articles WHERE id = ?')) {
+      const id = params[0];
+      const article = (global.memoryDB.articles || []).find(a => a.id === id || a.id === parseInt(id));
+      return [article ? [article] : []];
+    }
+    
+    if (query.includes('INSERT INTO articles')) {
+      const [title, content, category, required_reading_time, file_type, file_url, file_name, storage_type] = params;
+      const newId = Math.max(0, ...(global.memoryDB.articles || []).map(a => parseInt(a.id) || 0)) + 1;
+      const newArticle = {
+        id: newId,
+        title,
+        content,
+        category,
+        required_reading_time: required_reading_time || 30,
+        file_type: file_type || 'none',
+        file_url,
+        file_name,
+        storage_type: storage_type || 'local',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      if (!global.memoryDB.articles) {
+        global.memoryDB.articles = [];
+      }
+      global.memoryDB.articles.push(newArticle);
+      return [{ insertId: newId }];
+    }
+    
+    if (query.includes('UPDATE articles SET') && query.includes('WHERE id = ?')) {
+      const id = params[params.length - 1];
+      const articleIndex = (global.memoryDB.articles || []).findIndex(a => a.id === id || a.id === parseInt(id));
+      if (articleIndex !== -1) {
+        // 简单更新（需要根据具体UPDATE语句解析）
+        global.memoryDB.articles[articleIndex].updated_at = new Date().toISOString();
+        return [{ affectedRows: 1 }];
+      }
+      return [{ affectedRows: 0 }];
+    }
+    
+    if (query.includes('DELETE FROM articles WHERE id = ?')) {
+      const id = params[0];
+      const articleIndex = (global.memoryDB.articles || []).findIndex(a => a.id === id || a.id === parseInt(id));
+      if (articleIndex !== -1) {
+        global.memoryDB.articles.splice(articleIndex, 1);
+      }
+      return [{ affectedRows: articleIndex !== -1 ? 1 : 0 }];
+    }
+    
+    if (query.includes('SELECT COUNT(*) as count FROM articles')) {
+      const count = (global.memoryDB.articles || []).length;
+      return [[{ count }]];
+    }
+    
     return [[]];
   }
 };
@@ -292,21 +382,27 @@ testConnection();
 // 包装一个代理层，按需在每次调用时选择真实数据库或内存数据库
 const poolWrapper = {
   execute: async (query, params = []) => {
-    // 若内存库已准备，直接走内存库
-    if (global.memoryDB) {
-      return memoryQuery.execute(query, params);
-    }
+    // 优先尝试使用真实数据库
     try {
       return await pool.execute(query, params);
     } catch (error) {
       // 数据库不可用时，自动降级到内存库，保证线上不会 500
       console.error('数据库执行失败，自动降级到内存存储:', error.message);
-      if (!global.memoryDB) {
-        // 初始化一个最小的内存库（与 testConnection 中一致）
-        global.memoryDB = { users: [] };
+      
+      // 若内存库已准备，使用内存库
+      if (global.memoryDB) {
+        return memoryQuery.execute(query, params);
       }
+      
+      // 初始化一个最小的内存库
+      global.memoryDB = { users: [], articles: [] };
       return memoryQuery.execute(query, params);
     }
+  },
+  
+  // 添加 query 方法（兼容旧代码）
+  query: async (query, params = []) => {
+    return poolWrapper.execute(query, params);
   }
 };
 

@@ -4,8 +4,10 @@ import { getArticleById } from './articleData';
 import CameraCapture from './CameraCapture';
 import CameraDiagnostic from './CameraDiagnostic';
 import { savePhoto } from './photoStorage';
+import { photoAPI } from './config/api';
 import { getSettings } from './settingsStorage';
 import { getFilePreviewUrl } from './fileUploadService';
+import { apiClient } from './config/api';
 // import { HybridStorageService } from './hybridStorageService';
 
 interface ArticleReaderProps {
@@ -25,12 +27,137 @@ const ArticleReader: React.FC<ArticleReaderProps> = ({ user: _user }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [, setCapturedPhotos] = useState<string[]>([]);
   const [showDiagnostic, setShowDiagnostic] = useState(false);
+  const [article, setArticle] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   
   const intervalRef = useRef<number | null>(null);
+  const iframeContainerRef = useRef<HTMLDivElement>(null);
 
-  // 获取文章数据
-  const article = getArticleById(id || '1');
-  const requiredTime = article?.requiredReadingTime || 30;
+  const requiredTime = article?.requiredReadingTime || article?.required_reading_time || 30;
+
+  // 全屏切换功能
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      if (iframeContainerRef.current) {
+        iframeContainerRef.current.requestFullscreen().then(() => {
+          setIsFullscreen(true);
+        }).catch(err => {
+          console.error('无法进入全屏模式:', err);
+        });
+      }
+    } else {
+      document.exitFullscreen().then(() => {
+        setIsFullscreen(false);
+      }).catch(err => {
+        console.error('无法退出全屏模式:', err);
+      });
+    }
+  };
+
+  // 监听全屏变化
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  // 获取文章数据 - 优先从API获取，失败则从本地获取
+  useEffect(() => {
+    const fetchArticle = async () => {
+      if (!id) {
+        setError('文章ID无效');
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        // 优先从API获取文章数据
+        console.log('正在从API获取文章数据:', id);
+        const response = await apiClient.get(`/articles/${id}`);
+        
+        if (response.success && response.data) {
+          console.log('API获取文章成功:', response.data);
+          
+          // 转换服务器数据格式为前端格式
+          const serverArticle = response.data;
+          
+          // 尝试从本地数据获取题目（如果存在）
+          const localArticle = getArticleById(id);
+          const questions = localArticle?.questions || [
+            // 默认题目，用于所有文章
+            {
+              id: 1,
+              question: '请确认您已经认真阅读了文章内容？',
+              options: [
+                'A. 是的，我已认真阅读',
+                'B. 部分阅读',
+                'C. 没有阅读',
+                'D. 跳过阅读'
+              ],
+              correctAnswer: 0
+            },
+            {
+              id: 2,
+              question: '您对文章内容的理解程度如何？',
+              options: [
+                'A. 完全理解',
+                'B. 大部分理解',
+                'C. 部分理解',
+                'D. 不太理解'
+              ],
+              correctAnswer: 0
+            }
+          ];
+          
+          const formattedArticle = {
+            id: serverArticle.id?.toString(),
+            title: serverArticle.title,
+            content: serverArticle.content || '',
+            category: serverArticle.category || '未分类',
+            requiredReadingTime: serverArticle.required_reading_time || 30,
+            questions: questions,
+            fileType: serverArticle.file_type || 'none',
+            fileUrl: serverArticle.file_url,
+            fileName: serverArticle.file_name,
+            fileId: serverArticle.file_id,
+            storageType: serverArticle.storage_type || 'local'
+          };
+          
+          setArticle(formattedArticle);
+          setLoading(false);
+          return;
+        } else {
+          throw new Error(response.error || '获取文章失败');
+        }
+      } catch (error) {
+        console.warn('API获取文章失败，尝试从本地获取:', error);
+        
+        // API失败时，尝试从本地数据获取
+        const localArticle = getArticleById(id);
+        if (localArticle) {
+          console.log('从本地获取文章成功:', localArticle.title);
+          setArticle(localArticle);
+          setLoading(false);
+        } else {
+          console.error('本地也没有找到文章:', id);
+          setError('文章不存在');
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchArticle();
+  }, [id]);
 
   // 检测屏幕尺寸
   useEffect(() => {
@@ -86,19 +213,40 @@ const ArticleReader: React.FC<ArticleReaderProps> = ({ user: _user }) => {
   };
 
   // 处理拍照回调
-  const handlePhotoTaken = (photoData: string) => {
-    if (article) {
-      // 保存照片到存储系统
-      const photoRecord = savePhoto(
-        photoData, 
-        article.id, 
-        article.title, 
-        _user?.id?.toString() || '0', 
-        _user?.name
-      );
-      
-      setCapturedPhotos(prev => [...prev, photoData]);
-      console.log('学习监控照片已保存:', photoRecord);
+  const handlePhotoTaken = async (photoData: string) => {
+    if (!article) return;
+
+    // 1) 本地缓存一份，防止网络失败丢失
+    const photoRecord = savePhoto(
+      photoData,
+      article.id,
+      article.title,
+      _user?.id?.toString() || '0',
+      _user?.name
+    );
+    setCapturedPhotos(prev => [...prev, photoData]);
+
+    // 2) 同步到云端
+    try {
+      const userIdNum = Number(_user?.id || 0) || 1;
+      const articleIdNum = Number(article.id);
+      if (!Number.isFinite(articleIdNum) || articleIdNum <= 0) {
+        console.warn('跳过云端同步：文章未在云端建档，保持本地缓存');
+        return;
+      }
+      const res = await photoAPI.create({
+        user_id: userIdNum,
+        article_id: articleIdNum,
+        photo_data: photoData,
+        file_name: 'capture.jpg'
+      });
+      if (res && res.success) {
+        console.log('✅ 照片已同步云数据库', res.data);
+      } else {
+        console.warn('⚠️ 照片云端同步失败，将保留本地缓存', res?.error || 'unknown');
+      }
+    } catch (err) {
+      console.warn('⚠️ 照片云端同步异常，将保留本地缓存', err);
     }
   };
 
@@ -128,7 +276,8 @@ const ArticleReader: React.FC<ArticleReaderProps> = ({ user: _user }) => {
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
-  if (!article) {
+  // 加载状态
+  if (loading) {
     return (
       <div style={{ 
         position: 'relative', 
@@ -141,21 +290,63 @@ const ArticleReader: React.FC<ArticleReaderProps> = ({ user: _user }) => {
         justifyContent: 'center'
       }}>
         <div style={{ textAlign: 'center' }}>
-          <h2>文章不存在</h2>
-          <button
-            onClick={() => navigate('/articles')}
-            style={{
-              padding: '10px 20px',
-              background: 'linear-gradient(90deg,#409eff 60%,#2b8cff 100%)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '14px'
-            }}
-          >
-            返回文章列表
-          </button>
+          <div style={{ fontSize: '24px', marginBottom: '10px' }}>⏳</div>
+          <h2>正在加载文章...</h2>
+          <p style={{ opacity: 0.7, fontSize: '14px' }}>请稍候</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 错误状态
+  if (error || !article) {
+    return (
+      <div style={{ 
+        position: 'relative', 
+        zIndex: 10, 
+        padding: '20px',
+        color: '#fff',
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '48px', marginBottom: '20px' }}>❌</div>
+          <h2>{error || '文章不存在'}</h2>
+          <p style={{ opacity: 0.7, fontSize: '14px', marginBottom: '20px' }}>
+            {error ? '请检查网络连接或稍后重试' : '请确认文章ID是否正确'}
+          </p>
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                padding: '10px 20px',
+                background: 'linear-gradient(90deg,#67c23a 60%,#5daf34 100%)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              重新加载
+            </button>
+            <button
+              onClick={() => navigate('/articles')}
+              style={{
+                padding: '10px 20px',
+                background: 'linear-gradient(90deg,#409eff 60%,#2b8cff 100%)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              返回文章列表
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -263,20 +454,20 @@ const ArticleReader: React.FC<ArticleReaderProps> = ({ user: _user }) => {
       {currentStep === 'reading' && (
         <div style={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : '1fr 300px',
+          gridTemplateColumns: isMobile ? '1fr' : '1fr 250px',
           gridTemplateRows: isMobile ? '1fr auto' : 'auto',
-          gap: isMobile ? '15px' : '20px',
-          height: isMobile ? 'auto' : 'calc(100vh - 120px)'
+          gap: isMobile ? '10px' : '15px',
+          height: isMobile ? 'auto' : 'calc(100vh - 80px)'
         }}>
           {/* 文章内容 */}
           <div style={{
             background: 'rgba(0,0,0,0.3)',
-            padding: isMobile ? '20px' : '30px',
+            padding: isMobile ? '15px' : '20px',
             borderRadius: '12px',
             backdropFilter: 'blur(10px)',
             overflowY: 'auto',
             lineHeight: '1.8',
-            minHeight: isMobile ? '60vh' : 'auto',
+            minHeight: isMobile ? '70vh' : 'auto',
             order: isMobile ? 1 : 'auto'
           }}>
             {!isTimerActive ? (
@@ -307,31 +498,70 @@ const ArticleReader: React.FC<ArticleReaderProps> = ({ user: _user }) => {
                 {/* 文件型文章预览 */}
                 {article.fileType && article.fileType !== 'none' && (article.fileUrl || article.fileId) ? (
                   <div>
-                    <div style={{ marginBottom: '20px', padding: '15px', background: 'rgba(255,255,255,0.1)', borderRadius: '8px' }}>
-                      <h4 style={{ margin: '0 0 10px 0' }}>📄 文件预览</h4>
-                      <p style={{ margin: '0', fontSize: '14px', opacity: '0.8' }}>
-                        文件名: {article.fileName || '未知文件'}
-                        {article.storageType && (
-                          <span style={{ marginLeft: '10px', padding: '2px 6px', background: 'rgba(103, 194, 58, 0.2)', color: '#67c23a', borderRadius: '4px', fontSize: '10px' }}>
-                            {article.storageType === 'hybrid' ? '混合存储' : article.storageType === 'local' ? '本地存储' : 'OSS存储'}
-                          </span>
-                        )}
-                      </p>
+                    <div style={{ marginBottom: '10px', padding: '10px', background: 'rgba(255,255,255,0.1)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '16px' }}>📄</span>
+                        <span style={{ fontSize: '14px', opacity: '0.9' }}>
+                          {article.fileName || '未知文件'}
+                        </span>
+                      </div>
+                      {article.storageType && (
+                        <span style={{ padding: '2px 8px', background: 'rgba(103, 194, 58, 0.2)', color: '#67c23a', borderRadius: '4px', fontSize: '11px' }}>
+                          {article.storageType === 'hybrid' ? '混合存储' : article.storageType === 'local' ? '本地存储' : 'OSS存储'}
+                        </span>
+                      )}
                     </div>
-                    <div style={{ 
-                      width: '100%', 
-                      height: '70vh', 
-                      border: '1px solid rgba(255,255,255,0.2)', 
-                      borderRadius: '8px',
-                      overflow: 'hidden'
-                    }}>
+                    <div 
+                      ref={iframeContainerRef}
+                      style={{ 
+                        width: '100%', 
+                        height: isFullscreen ? '100vh' : (isMobile ? '75vh' : '85vh'), 
+                        minHeight: isMobile ? '400px' : '600px',
+                        maxHeight: isFullscreen ? '100vh' : (isMobile ? 'calc(100vh - 100px)' : 'calc(100vh - 150px)'),
+                        border: isFullscreen ? 'none' : '1px solid rgba(255,255,255,0.2)', 
+                        borderRadius: isFullscreen ? '0' : '8px',
+                        overflow: 'hidden',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        position: 'relative',
+                        background: isFullscreen ? '#fff' : 'transparent'
+                      }}
+                    >
+                      {/* 全屏切换按钮 */}
+                      <button
+                        onClick={toggleFullscreen}
+                        style={{
+                          position: 'absolute',
+                          top: '10px',
+                          right: '10px',
+                          zIndex: 10,
+                          padding: '8px 12px',
+                          background: 'rgba(0,0,0,0.7)',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          backdropFilter: 'blur(10px)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '5px'
+                        }}
+                        title={isFullscreen ? '退出全屏' : '全屏阅读'}
+                      >
+                        {isFullscreen ? '🔲 退出全屏' : '🔳 全屏阅读'}
+                      </button>
                       <iframe
                         src={(() => {
                           let fileUrl = article.fileUrl;
-                          if (article.fileId) {
-                            // 直接使用fileId构建URL，因为现在使用云服务器存储
-                            fileUrl = `${window.location.origin}/api/files/${article.fileId}`;
+                          
+                          // 如果有file_name，使用服务器的文件下载接口
+                          if (article.fileName) {
+                            fileUrl = `${window.location.origin}/api/files/download/${article.fileName}`;
+                          } else if (article.fileId) {
+                            // 兼容旧版本的fileId
+                            fileUrl = `${window.location.origin}/api/files/download/${article.fileId}`;
                           }
+                          
                           return fileUrl ? getFilePreviewUrl(fileUrl, article.fileType || 'pdf') : '';
                         })()}
                         style={{

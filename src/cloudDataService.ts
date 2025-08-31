@@ -23,9 +23,23 @@ export class CloudArticleService {
         throw new Error(`获取文章失败: ${response.status}`);
       }
       
-      const result: CloudApiResponse<ArticleData[]> = await response.json();
-      if (result.success) {
-        return result.data || [];
+      const result: CloudApiResponse<any[]> = await response.json();
+      if (result.success && result.data) {
+        // 转换服务器数据格式为前端格式
+        return result.data.map((serverArticle: any) => ({
+          id: serverArticle.id?.toString(),
+          title: serverArticle.title || '未命名文章',
+          content: serverArticle.content || '',
+          category: serverArticle.category || '未分类',
+          requiredReadingTime: serverArticle.required_reading_time || 30,
+          questions: serverArticle.questions ? JSON.parse(serverArticle.questions) : [], // 解析题目数据
+          fileType: serverArticle.file_type || 'none',
+          fileUrl: serverArticle.file_url,
+          fileName: serverArticle.file_name,
+          fileId: serverArticle.file_id,
+          storageType: serverArticle.storage_type || 'local',
+          allowedJobTypes: serverArticle.allowed_job_types ? JSON.parse(serverArticle.allowed_job_types) : undefined
+        }));
       } else {
         throw new Error(result.error || '获取文章失败');
       }
@@ -38,21 +52,51 @@ export class CloudArticleService {
   // 添加文章
   static async addArticle(article: Omit<ArticleData, 'id'>): Promise<ArticleData> {
     try {
-      const response = await fetch(`${API_BASE}/articles/single`, {
+      // 转换前端数据格式为服务器格式
+      const serverArticle = {
+        title: article.title,
+        content: article.content,
+        category: article.category,
+        required_reading_time: article.requiredReadingTime || 30,
+        file_type: article.fileType || 'none',
+        file_url: article.fileUrl,
+        file_name: article.fileName,
+        file_id: article.fileId,
+        storage_type: article.storageType || 'local',
+        allowed_job_types: article.allowedJobTypes || null,
+        questions: article.questions ? JSON.stringify(article.questions) : null
+      };
+
+      const response = await fetch(`${API_BASE}/articles`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(article),
+        body: JSON.stringify(serverArticle),
       });
 
       if (!response.ok) {
         throw new Error(`添加文章失败: ${response.status}`);
       }
 
-      const result: CloudApiResponse<ArticleData> = await response.json();
+      const result = await response.json();
       if (result.success && result.data) {
-        return result.data;
+        // 转换服务器数据格式为前端格式
+        const serverData = result.data;
+        return {
+          id: serverData.id?.toString(),
+          title: serverData.title,
+          content: serverData.content || '',
+          category: serverData.category || '未分类',
+          requiredReadingTime: serverData.required_reading_time || 30,
+          questions: article.questions || [], // 保留原始题目数据
+          fileType: serverData.file_type || 'none',
+          fileUrl: serverData.file_url,
+          fileName: serverData.file_name,
+          fileId: serverData.file_id,
+          storageType: serverData.storage_type || 'local',
+          allowedJobTypes: serverData.allowed_job_types ? JSON.parse(serverData.allowed_job_types) : undefined
+        };
       } else {
         throw new Error(result.error || '添加文章失败');
       }
@@ -65,21 +109,36 @@ export class CloudArticleService {
   // 更新文章
   static async updateArticle(article: ArticleData): Promise<ArticleData> {
     try {
+      // 转换前端数据格式为服务器格式
+      const serverArticle = {
+        title: article.title,
+        content: article.content,
+        category: article.category,
+        required_reading_time: article.requiredReadingTime || 30,
+        file_type: article.fileType || 'none',
+        file_url: article.fileUrl,
+        file_name: article.fileName,
+        file_id: article.fileId,
+        storage_type: article.storageType || 'local',
+        allowed_job_types: article.allowedJobTypes || null,
+        questions: article.questions ? JSON.stringify(article.questions) : null
+      };
+
       const response = await fetch(`${API_BASE}/articles/${article.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(article),
+        body: JSON.stringify(serverArticle),
       });
 
       if (!response.ok) {
         throw new Error(`更新文章失败: ${response.status}`);
       }
 
-      const result: CloudApiResponse<ArticleData> = await response.json();
-      if (result.success && result.data) {
-        return result.data;
+      const result: CloudApiResponse = await response.json();
+      if (result.success) {
+        return article; // 返回更新后的文章数据
       } else {
         throw new Error(result.error || '更新文章失败');
       }
@@ -123,7 +182,7 @@ export class CloudArticleService {
     for (const article of localArticles) {
       try {
         // 尝试更新（如果存在）或添加（如果不存在）
-        await fetch(`${API_BASE}/articles/single`, {
+        await fetch(`${API_BASE}/articles`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

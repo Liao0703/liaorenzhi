@@ -185,43 +185,32 @@ export const getFilePreviewUrl = (fileUrl: string, fileType: string): string => 
       return '';
     }
 
-    // 检查URL是否有效
-    let isValidUrl = false;
-    try {
-      new URL(fileUrl);
-      isValidUrl = true;
-    } catch (error) {
-      // 如果是相对URL，补充完整URL
-        if (fileUrl.startsWith('/')) {
-          fileUrl = `${API_ORIGIN}${fileUrl}`;
-        isValidUrl = true;
-      } else {
-        console.error('无效的文件URL:', fileUrl);
-        return '';
-      }
+    console.log('生成文件预览URL:', { fileUrl, fileType });
+
+    // 确保URL是完整的
+    let fullUrl = fileUrl;
+    if (fileUrl.startsWith('/')) {
+      fullUrl = `${window.location.origin}${fileUrl}`;
     }
 
     if (fileType === 'pdf') {
-      // PDF可以直接预览
-      return fileUrl;
+      // PDF文件直接返回URL，浏览器可以直接预览
+      console.log('PDF预览URL:', fullUrl);
+      return fullUrl;
     } else if (fileType === 'word') {
-      // Word文件使用Office Online Viewer
-      if (isValidUrl) {
-        return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`;
-      }
-    } else if (fileType === 'text' || fileType === 'html') {
-      // 文本文件可以直接预览
-      return fileUrl;
-    } else if (fileType === 'image') {
-      // 图片文件直接显示
-      return fileUrl;
+      // Word文件使用Microsoft Office Online Viewer
+      const encodedUrl = encodeURIComponent(fullUrl);
+      const officeViewerUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodedUrl}`;
+      console.log('Word预览URL:', officeViewerUrl);
+      return officeViewerUrl;
+    } else {
+      // 其他文件类型尝试直接预览
+      console.log('其他文件类型预览URL:', fullUrl);
+      return fullUrl;
     }
-
-    // 默认返回下载链接
-    return fileUrl;
   } catch (error) {
     console.error('生成文件预览URL失败:', error);
-    return fileUrl || '';
+    return fileUrl; // 出错时返回原URL
   }
 };
 
